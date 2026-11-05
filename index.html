@@ -13,9 +13,10 @@
 
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script defer src="app.js"></script>
+<script defer src="polish.js"></script>
 <link rel="stylesheet" href="style.css">
 
 </head>
@@ -26,7 +27,7 @@
 <div id="authScreen" style="position:fixed;inset:0;background:transparent;z-index:9999;display:flex;align-items:center;justify-content:center;">
   <div class="panel" style="width:100%;max-width:320px;text-align:center;border-radius: 25px; box-shadow: 0 15px 40px rgba(0,0,0,0.1);">
     <div class="auth-mascot"><svg class="ic" aria-hidden="true"><use href="#th-light"/></svg></div>
-    <h2 style="font-family:'Elsie', serif; color:var(--p); margin:5px 0 5px; font-size:28px; font-weight:900"><svg class="ic ic-sm" aria-hidden="true"><use href="#th-light"/></svg> Rekapan LiXi Store</h2>
+    <h2 style="font-family:var(--fh); color:var(--p); margin:5px 0 5px; font-size:28px; font-weight:600"><svg class="ic ic-sm" aria-hidden="true"><use href="#th-light"/></svg> Rekapan LiXi Store</h2>
     <p class="muted" style="margin-bottom:20px;font-size:14px">Login untuk mengakses database</p>
     <input id="loginEmail" type="email" autocomplete="username" placeholder="Email Supabase" style="margin-bottom:12px; text-align:center">
     <input id="loginPass" type="password" autocomplete="current-password" placeholder="Password" style="margin-bottom:15px; text-align:center">
