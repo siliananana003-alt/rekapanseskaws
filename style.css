@@ -639,3 +639,43 @@ body::after{display:none!important}
 .pk-row[aria-selected=true] .pk-ck{visibility:visible}
 .pk-empty{padding:22px 10px;text-align:center;color:var(--mt);font-weight:600}
 
+
+/* ==========================================================================
+   Polish tambahan (hanya tampilan; tidak menyentuh data/Supabase)
+   ========================================================================== */
+
+/* Label kecil yang belum ikut lapisan keterbacaan sebelumnya */
+.trend-summary-item span,.customer-stat span{font-size:11px;color:var(--mt)}
+
+/* Login: tombol lihat password */
+.lx-pass{position:relative;margin-bottom:15px}
+.lx-pass input{margin-bottom:0!important;padding-left:48px;padding-right:48px}
+.lx-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:40px;height:40px;padding:0;border:0;border-radius:14px;background:transparent;cursor:pointer;display:grid;place-items:center;transition:background .2s}
+.lx-eye:hover{background:var(--p2)}
+.lx-eye .ic{width:24px;height:24px}
+
+/* Login: panel bergoyang halus saat gagal */
+@keyframes lx-shake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-6px)}40%,60%{transform:translateX(6px)}}
+.lx-shake{animation:lx-shake .45s ease-in-out}
+
+/* Pemuatan pertama: angka kartu berkilau, bukan "Rp0" yang menyesatkan */
+@keyframes lx-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+.lx-boot .kawaii-card .k-value,.lx-boot .ii-value{
+  color:transparent!important;width:min(78%,120px);min-height:1.25em;border-radius:10px;
+  background:linear-gradient(90deg,rgba(255,255,255,.35) 25%,rgba(255,255,255,.9) 50%,rgba(255,255,255,.35) 75%) 0 0/200% 100%;
+  animation:lx-shimmer 1.3s linear infinite}
+[data-theme=dark].lx-boot .kawaii-card .k-value,[data-theme=dark].lx-boot .ii-value{
+  background:linear-gradient(90deg,rgba(255,255,255,.06) 25%,rgba(255,255,255,.18) 50%,rgba(255,255,255,.06) 75%) 0 0/200% 100%}
+
+/* ==========================================================================
+   Tema baru: Lemon Soda (butter + aqua mint) & Mocha Latte (krim + cokelat)
+   ========================================================================== */
+[data-theme=lemon]{--p:#4cc0ac;--pd:#248272;--p2:#fffbe0;--p3:#ffeea0;--ink:#4a4631;--muted:#9a9272;--line:#f6edbf;--bg:#fffdf0;--hue:-175deg}
+[data-theme=mocha]{--p:#c1917a;--pd:#97644d;--p2:#fff4ec;--p3:#f3dccd;--ink:#5b4236;--muted:#a08a7e;--line:#f2e4da;--bg:#fff9f4;--hue:45deg}
+[data-theme=lemon] .side{background:linear-gradient(180deg,#fffef5,#effaf6 70%,#fffbea)}
+[data-theme=mocha] .side{background:linear-gradient(180deg,#fffaf6,#fbefe6 70%,#fff6ef)}
+[data-theme=lemon] .nav button.active{box-shadow:0 4px 10px rgba(76,192,172,.22)}
+[data-theme=mocha] .nav button.active{box-shadow:0 4px 10px rgba(193,145,122,.25)}
+
+/* Menu tema: 9 pilihan = kisi 3x3 yang rapi */
+.theme-pop{grid-template-columns:repeat(3,40px)}
