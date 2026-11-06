@@ -182,12 +182,6 @@
     };
     swap('.month-control', 'i-cal-t');
     swap('.clock-control', 'i-clock-t');
-
-    // Ketuk di mana saja pada pil bulan -> pemilih bulan terbuka (jika browser mendukung)
-    var m = byId('globalMonth');
-    if (m && typeof m.showPicker === 'function') {
-      m.addEventListener('click', function () { try { m.showPicker(); } catch (e) { /* abaikan */ } });
-    }
   })();
 
   /* ---------- 8) Kartu "Hari Ini" -> Transaksi hari ini saja ----------
@@ -454,5 +448,105 @@
       };
     }
     label();
+  })();
+  /* ---------- 13) Pemilih bulan yang manis ----------
+   * Menggantikan kalender bawaan browser (yang tidak bisa didandani). Memilih bulan = mengisi
+   * #globalMonth lalu memicu event "change" yang sudah dipakai app (-> changeMonth()).
+   * Titik kecil menandai bulan yang punya transaksi (dibaca dari data yang sudah dimuat). */
+  (function () {
+    var input = byId('globalMonth');
+    var label = input && input.closest('.month-control');
+    if (!input || !label || !label.parentNode) return;
+    var host = label.parentNode;
+    host.classList.add('lx-mp-host');
+
+    var SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    var FULL = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    var EMO = ['❄️', '💝', '🌷', '🌦️', '🌼', '☀️', '🍉', '🌈', '🍂', '🎃', '🍄', '🎄'];
+
+    // readonly: tidak memunculkan kalender bawaan / keyboard; nilai tetap bisa diisi lewat kode
+    input.readOnly = true;
+    input.setAttribute('inputmode', 'none');
+    input.setAttribute('aria-haspopup', 'dialog');
+    input.setAttribute('aria-expanded', 'false');
+
+    var pop = document.createElement('div');
+    pop.className = 'lx-mp'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Pilih bulan'); pop.hidden = true;
+    host.appendChild(pop);
+
+    var viewYear = new Date().getFullYear();
+    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    var curKey = function () { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
+    var selKey = function () { return /^\d{4}-\d{2}$/.test(input.value) ? input.value : curKey(); };
+    function dataMonths() {
+      var set = {};
+      try {
+        if (typeof allTxs !== 'undefined' && Array.isArray(allTxs)) allTxs.forEach(function (t) {
+          var d = t && t.transaction_date;
+          if (typeof d === 'string' && d.length >= 7) set[d.slice(0, 7)] = 1;
+        });
+      } catch (e) { /* abaikan */ }
+      return set;
+    }
+
+    function render() {
+      var sel = selKey(), now = curKey(), has = dataMonths(), h = '';
+      h += '<div class="lx-mp-head"><button type="button" class="lx-mp-nav" data-y="-1" aria-label="Tahun sebelumnya">‹</button>' +
+           '<div class="lx-mp-year" aria-live="polite">' + viewYear + '</div>' +
+           '<button type="button" class="lx-mp-nav" data-y="1" aria-label="Tahun berikutnya">›</button></div><div class="lx-mp-grid" role="group" aria-label="Bulan">';
+      for (var i = 0; i < 12; i++) {
+        var key = viewYear + '-' + pad(i + 1);
+        h += '<button type="button" class="lx-mp-m' + (key === sel ? ' on' : '') + (key === now ? ' now' : '') + (has[key] ? ' has' : '') +
+             '" data-k="' + key + '" aria-pressed="' + (key === sel) + '" title="' + FULL[i] + ' ' + viewYear + '">' +
+             '<span class="lx-mp-e" aria-hidden="true">' + EMO[i] + '</span><span>' + SHORT[i] + '</span></button>';
+      }
+      h += '</div><div class="lx-mp-foot"><button type="button" class="lx-mp-today">✨ Bulan ini</button>' +
+           '<span class="lx-mp-leg"><i></i> ada transaksi</span></div>';
+      pop.innerHTML = h;
+    }
+    function open() {
+      viewYear = +selKey().slice(0, 4);
+      render(); pop.hidden = false;
+      label.classList.add('open'); input.setAttribute('aria-expanded', 'true');
+      var on = pop.querySelector('.lx-mp-m.on') || pop.querySelector('.lx-mp-m');
+      if (on) on.focus({ preventScroll: true });
+    }
+    function close(back) {
+      pop.hidden = true; label.classList.remove('open'); input.setAttribute('aria-expanded', 'false');
+      if (back) input.focus({ preventScroll: true });
+    }
+    function choose(key) {
+      input.value = key;
+      input.dispatchEvent(new Event('change', { bubbles: true }));   // -> changeMonth() milik app
+      close(true);
+    }
+
+    label.addEventListener('click', function (e) { e.preventDefault(); if (pop.hidden) open(); else close(false); });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); if (pop.hidden) open(); }
+    });
+    pop.addEventListener('click', function (e) {
+      e.lxInside = true;   // render() mengganti isi panel; tandai agar klik ini tidak dianggap "di luar"
+      var nav = e.target.closest('.lx-mp-nav');
+      if (nav) {
+        var dir = nav.dataset.y;
+        viewYear += +dir; render();
+        var again = pop.querySelector('.lx-mp-nav[data-y="' + dir + '"]');
+        if (again) again.focus({ preventScroll: true });
+        return;
+      }
+      var m = e.target.closest('.lx-mp-m');
+      if (m) { choose(m.dataset.k); return; }
+      if (e.target.closest('.lx-mp-today')) choose(curKey());
+    });
+    pop.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); close(true); return; }
+      var btns = [].slice.call(pop.querySelectorAll('.lx-mp-m')), i = btns.indexOf(document.activeElement);
+      var step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -3, ArrowDown: 3 }[e.key];
+      if (i >= 0 && step) { e.preventDefault(); var j = i + step; if (j >= 0 && j < 12) btns[j].focus(); }
+    });
+    document.addEventListener('click', function (e) {
+      if (!e.lxInside && !pop.hidden && !pop.contains(e.target) && !label.contains(e.target)) close(false);
+    });
   })();
 })();
