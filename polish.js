@@ -255,13 +255,13 @@
     });
   })();
 
-  /* ---------- 10) Durasi: daftar pilihan (datalist) + tombol cepat ----------
+  /* ---------- 10) Durasi: daftar pilihan (dropdown) di kolom durasi ----------
    * Dipasang di form transaksi, form "Produk Baru" (di dalam transaksi), dan form Produk.
-   * Hanya mengisi kolom durasi yang sudah ada lalu memicu event "input"; tidak menyentuh data. */
+   * Hanya menambah daftar saran pada kolom durasi yang sudah ada; tidak menyentuh data. */
   (function () {
     var PRESET = [7, 14, 30, 60, 90, 180, 365];
     var NAMES = { 7: '1 minggu', 14: '2 minggu', 30: '1 bulan', 60: '2 bulan', 90: '3 bulan', 180: '6 bulan', 365: '1 tahun' };
-    var instances = [];
+    var builders = [];
 
     // Preset + durasi yang dipakai produk milikmu (paling sering dipakai dulu, maks. 5 tambahan)
     function durations() {
@@ -283,69 +283,28 @@
       dur.parentNode.insertBefore(dl, dur.nextSibling);
       dur.setAttribute('list', listId);
       dur.setAttribute('inputmode', 'numeric');
-
-      var row = document.createElement('div');
-      row.className = 'lx-dur-chips';
-      row.setAttribute('role', 'group');
-      row.setAttribute('aria-label', 'Pilihan cepat durasi');
-      dur.parentNode.appendChild(row);
-
-      function mark() {
-        var v = String(dur.value).trim();
-        row.querySelectorAll('.lx-chip').forEach(function (b) {
-          var on = b.dataset.d === v;
-          b.classList.toggle('on', on);
-          b.setAttribute('aria-pressed', on ? 'true' : 'false');
-        });
-      }
       function build() {
         var list = durations(), key = list.join(',');
-        if (row.dataset.key !== key) {
-          row.dataset.key = key;
-          row.innerHTML = ''; dl.innerHTML = '';
-          list.forEach(function (n) {
-            var b = document.createElement('button');
-            b.type = 'button'; b.className = 'lx-chip'; b.dataset.d = String(n);
-            b.textContent = n + ' hari'; if (NAMES[n]) b.title = NAMES[n];
-            row.appendChild(b);
-            var o = document.createElement('option');
-            o.value = String(n); o.label = n + ' hari' + (NAMES[n] ? ' (' + NAMES[n] + ')' : '');
-            dl.appendChild(o);
-          });
-        }
-        mark();
+        if (dl.dataset.key === key) return;
+        dl.dataset.key = key;
+        dl.innerHTML = '';
+        list.forEach(function (n) {
+          var o = document.createElement('option');
+          o.value = String(n);
+          o.label = n + ' hari' + (NAMES[n] ? ' (' + NAMES[n] + ')' : '');
+          dl.appendChild(o);
+        });
       }
-      row.addEventListener('click', function (e) {
-        var b = e.target.closest('.lx-chip');
-        if (!b) return;
-        dur.value = b.dataset.d;
-        dur.dispatchEvent(new Event('input', { bubbles: true }));   // fDuration -> updateExpire() milik app
-        mark();
-      });
-      instances.push(build);
+      builders.push(build);
       build();
     }
-    function refresh() { instances.forEach(function (f) { f(); }); }
+    function refresh() { builders.forEach(function (f) { f(); }); }
 
     attach(byId('fDuration'), 'fDurationList');
     attach(byId('qProductDuration'), 'qProductDurationList');
     attach(byId('pDuration'), 'pDurationList');
 
-    // Sorotan chip ikut berubah saat app mengisi durasi otomatis atau saat mengetik
-    ['txForm', 'prodForm'].forEach(function (id) {
-      var f = byId(id);
-      if (f) ['input', 'change', 'click'].forEach(function (ev) {
-        f.addEventListener(ev, function () { setTimeout(refresh, 0); });
-      });
-    });
-    // ...dan saat modal / kotak "Produk Baru" / form Produk dibuka
-    if (window.MutationObserver) {
-      var mo = new MutationObserver(function () { setTimeout(refresh, 0); });
-      ['modal', 'quickProductBox', 'prodForm'].forEach(function (id) {
-        var el = byId(id);
-        if (el) mo.observe(el, { attributes: true, attributeFilter: ['class', 'style'] });
-      });
-    }
+    // Daftar disegarkan saat modal dibuka (produk baru bisa membawa durasi baru)
     var origOpen = window.openTx;
     if (typeof origOpen === 'function') {
       window.openTx = function () {
@@ -378,5 +337,122 @@
     }
     new MutationObserver(apply).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
     apply();
+  })();
+  /* ---------- 12) Pilihan Paket & Durasi: daftar yang mudah dipilih ----------
+   * <select id="fProduct"> asli tetap jadi sumber kebenaran (hanya disembunyikan secara visual).
+   * Memilih item = mengisi kolom produk + select lalu memicu event yang sudah dipakai app
+   * (input pada #fProductName -> updateVariantDropdown, change pada #fProduct -> syncProduct).
+   * Tidak ada query/tulis ke database. */
+  (function () {
+    var sel = byId('fProduct'), nameIn = byId('fProductName');
+    if (!sel || !sel.parentNode || !nameIn) return;
+    var box = sel.parentNode;
+    box.classList.add('lx-pk');
+    sel.classList.add('lx-sr');
+    sel.tabIndex = -1;
+    sel.setAttribute('aria-hidden', 'true');
+
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'lx-pk-btn is-empty';
+    btn.setAttribute('aria-haspopup', 'listbox'); btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-label', 'Pilihan paket dan durasi');
+    btn.innerHTML = '<span class="lx-pk-main"></span><span class="lx-pk-caret" aria-hidden="true">▾</span>';
+    var list = document.createElement('div');
+    list.className = 'lx-pk-list'; list.setAttribute('role', 'listbox'); list.hidden = true;
+    box.appendChild(btn); box.appendChild(list);
+    var main = btn.querySelector('.lx-pk-main');
+
+    var esc2 = function (v) {
+      return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; });
+    };
+    var money = function (n) {
+      try { return typeof rupiah === 'function' ? rupiah(n) : 'Rp' + Number(n || 0).toLocaleString('id-ID'); } catch (e) { return ''; }
+    };
+    var prods = function () {
+      try { return (typeof products !== 'undefined' && Array.isArray(products)) ? products : []; } catch (e) { return []; }
+    };
+    var byDur = function (a, b) {
+      return (+a.duration_days || 0) - (+b.duration_days || 0) ||
+        String(a.package || '').localeCompare(String(b.package || ''), 'id', { sensitivity: 'base', numeric: true });
+    };
+    var findById = function (id) { return prods().filter(function (p) { return String(p.id) === String(id); })[0]; };
+
+    function label() {
+      var p = sel.value ? findById(sel.value) : null;
+      if (p) {
+        main.innerHTML = '<b>' + esc2(p.package) + '</b><span> · ' + esc2(p.duration_days) + ' hari · ' + esc2(money(p.price)) + '</span>';
+        btn.classList.remove('is-empty');
+      } else {
+        main.textContent = 'Pilih paket & durasi';
+        btn.classList.add('is-empty');
+      }
+    }
+    function item(p, on) {
+      return '<button type="button" class="lx-pk-item' + (on ? ' on' : '') + '" role="option" aria-selected="' + (on ? 'true' : 'false') + '" data-id="' + esc2(p.id) + '">' +
+        '<span class="lx-pk-name"><b>' + esc2(p.package) + '</b><small>' + esc2(p.duration_days) + ' hari</small></span>' +
+        '<span class="lx-pk-price">' + esc2(money(p.price)) + '</span></button>';
+    }
+    function render() {
+      var all = prods(), name = (nameIn.value || '').trim(), cur = sel.value, html = '';
+      var mine = name ? all.filter(function (p) { return p.name === name; }).sort(byDur) : [];
+      if (mine.length) {
+        html = mine.map(function (p) { return item(p, String(p.id) === String(cur)); }).join('');
+      } else if (all.length) {
+        // Belum ada produk yang valid: tampilkan semua paket per produk, pilih sekali ketuk
+        var groups = {}, order = [];
+        all.forEach(function (p) { if (!groups[p.name]) { groups[p.name] = []; order.push(p.name); } groups[p.name].push(p); });
+        order.sort(function (a, b) { return String(a).localeCompare(String(b), 'id', { sensitivity: 'base' }); });
+        html = '<div class="lx-pk-hint">Pilih produk & paketnya sekaligus 👇</div>' + order.map(function (n) {
+          return '<div class="lx-pk-group">' + esc2(n) + '</div>' + groups[n].sort(byDur).map(function (p) { return item(p, false); }).join('');
+        }).join('');
+      } else {
+        html = '<div class="lx-pk-hint">Belum ada produk. Tambahkan lewat “+ Produk Baru” ✨</div>';
+      }
+      list.innerHTML = html;
+    }
+    function open() {
+      render(); list.hidden = false;
+      btn.setAttribute('aria-expanded', 'true'); box.classList.add('open');
+      var on = list.querySelector('.on'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest' });
+    }
+    function close() {
+      list.hidden = true; btn.setAttribute('aria-expanded', 'false'); box.classList.remove('open');
+    }
+
+    btn.addEventListener('click', function () { if (list.hidden) open(); else close(); });
+    document.addEventListener('click', function (e) { if (!list.hidden && !box.contains(e.target)) close(); });
+    box.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !list.hidden) { e.stopPropagation(); close(); btn.focus(); }
+    });
+    list.addEventListener('click', function (e) {
+      var b = e.target.closest('.lx-pk-item');
+      if (!b) return;
+      var p = findById(b.dataset.id);
+      if (!p) return;
+      if ((nameIn.value || '').trim() !== p.name) {
+        nameIn.value = p.name;
+        nameIn.dispatchEvent(new Event('input', { bubbles: true }));   // -> updateVariantDropdown(null)
+      }
+      sel.value = String(p.id);
+      sel.dispatchEvent(new Event('change', { bubbles: true }));       // -> syncProduct()
+      close(); label();
+    });
+
+    // Label ikut berubah saat app membangun ulang pilihan paket (ganti produk / edit transaksi)
+    if (window.MutationObserver) {
+      new MutationObserver(function () { label(); if (!list.hidden) render(); }).observe(sel, { childList: true, subtree: true });
+    }
+    var form = byId('txForm');
+    if (form) ['input', 'change'].forEach(function (ev) { form.addEventListener(ev, function () { setTimeout(label, 0); }); });
+    var origOpen = window.openTx;
+    if (typeof origOpen === 'function') {
+      window.openTx = function () {
+        close();
+        var r = origOpen.apply(this, arguments);
+        setTimeout(label, 60);
+        return r;
+      };
+    }
+    label();
   })();
 })();
