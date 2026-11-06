@@ -787,3 +787,40 @@ body::after{display:none!important}
 .lx-pk-price{font-weight:800;font-size:13px;white-space:nowrap}
 .lx-pk-group{padding:9px 12px 3px;font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:color-mix(in srgb,var(--p) 45%,var(--ink))}
 .lx-pk-hint{padding:8px 12px;font-size:12px;font-weight:700;color:var(--mt)}
+
+/* ==========================================================================
+   Pemilih bulan yang manis (menggantikan kalender bawaan browser)
+   ========================================================================== */
+.lx-mp-host{position:relative}
+.month-control::after{transition:transform .2s}
+.month-control.open::after{transform:rotate(180deg)}
+@keyframes lx-mp-in{from{opacity:0;transform:translateY(-6px) scale(.94)}to{opacity:1;transform:none}}
+.lx-mp{position:absolute;top:calc(100% + 10px);left:0;z-index:70;width:min(310px,calc(100vw - 24px));padding:12px;
+  border-radius:24px;border:2px solid var(--p3);background:linear-gradient(160deg,var(--p2),var(--panel) 65%);
+  box-shadow:0 6px 0 var(--p3),0 18px 36px rgba(90,60,80,.18);animation:lx-mp-in .22s cubic-bezier(.34,1.56,.64,1)}
+.lx-mp[hidden]{display:none}
+.lx-mp-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.lx-mp-year{flex:1;text-align:center;font-weight:800;font-size:20px;letter-spacing:.5px;padding:6px 0;border-radius:999px;
+  background:var(--panel);box-shadow:inset 0 0 0 2px var(--p3);color:color-mix(in srgb,var(--p) 45%,var(--ink))}
+.lx-mp-nav{width:40px;height:40px;border:0;border-radius:50%;cursor:pointer;display:grid;place-items:center;
+  background:var(--p3);color:color-mix(in srgb,var(--p) 45%,var(--ink));font:inherit;font-size:24px;font-weight:800;line-height:1;
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
+.lx-mp-nav:hover{transform:scale(1.1)}.lx-mp-nav:active{transform:scale(.92)}
+.lx-mp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.lx-mp-m{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:56px;
+  border:2px solid var(--p3);border-radius:18px;background:var(--panel);cursor:pointer;font:inherit;font-weight:800;font-size:14px;
+  color:color-mix(in srgb,var(--p) 45%,var(--ink));box-shadow:0 3px 0 var(--p3);
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s}
+.lx-mp-e{font-size:17px;line-height:1}
+.lx-mp-m:hover{transform:translateY(-2px);box-shadow:0 5px 0 var(--p3)}
+.lx-mp-m:active{transform:translateY(2px);box-shadow:0 1px 0 var(--p3)}
+.lx-mp-m.now{border-style:dashed;border-color:var(--p)}
+.lx-mp-m.on{background:var(--pd);border-color:var(--pd);color:#fff;box-shadow:0 3px 0 color-mix(in srgb,var(--pd) 70%,#000)}
+.lx-mp-m.has::after{content:'';position:absolute;top:7px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--p)}
+.lx-mp-m.on.has::after{background:#fff}
+.lx-mp-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px}
+.lx-mp-today{border:0;border-radius:999px;padding:8px 14px;cursor:pointer;font:inherit;font-weight:800;font-size:12px;
+  background:var(--p3);color:color-mix(in srgb,var(--p) 45%,var(--ink));transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
+.lx-mp-today:hover{transform:translateY(-1px)}.lx-mp-today:active{transform:scale(.96)}
+.lx-mp-leg{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--mt)}
+.lx-mp-leg i{width:7px;height:7px;border-radius:50%;background:var(--p)}
