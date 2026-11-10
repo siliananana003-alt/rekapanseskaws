@@ -707,3 +707,28 @@ body::after{display:none!important}
 .lx-mp-today:active{transform:scale(.96)}
 .lx-mp-leg{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--mt)}
 .lx-mp-leg i{width:7px;height:7px;border-radius:50%;background:var(--p)}
+
+/* ---- Transaksi: filter, total, pratinjau profit ---- */
+.tx-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tx-filters select.search{padding:8px 10px;max-width:170px;border-radius:10px;font-size:13px;font-weight:700}
+.tx-filters input.search{flex:1 1 190px;max-width:260px}
+#txFoot td{background:var(--p2);font-weight:800;border-top:2px solid var(--p3);white-space:nowrap}
+#txFoot td.tx-foot-label{text-align:left}
+.profit-preview{grid-column:span 2;padding:8px 12px;border-radius:12px;background:var(--p2);font-size:13px;color:var(--muted)}
+.profit-preview b{font-size:15px;color:var(--green)}
+.profit-preview.neg b{color:var(--red)}
+@media(max-width:600px){
+  .tx-filters{width:100%}
+  .tx-filters select.search{flex:1 1 45%;max-width:none}
+  .tx-filters input.search{flex:1 1 100%;max-width:none}
+  .tablewrap tfoot{display:block}
+  .tablewrap tfoot tr{display:block;margin:0 0 12px;padding:10px 14px;background:var(--p2);border:2px solid var(--p3);border-radius:20px}
+  #txFoot td{background:transparent;border-top:0}
+  #txFoot td.tx-foot-pad{display:none}
+  #txFoot td.tx-foot-label{font-size:14px}
+}
+@media(min-width:601px){
+  /* Tombol Aksi boleh turun baris agar "Hapus" tidak tersembunyi di balik scroll horizontal */
+  #txTable td:last-child{white-space:normal;min-width:150px;max-width:250px}
+  #txTable td:last-child .btn{margin:0 2px 4px 0;padding:6px 10px;min-height:0;font-size:12px}
+}
