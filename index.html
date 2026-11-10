@@ -161,11 +161,14 @@
               <option value="all">🌟 Semua Data</option>
               <option value="new">🆕 Pelanggan Baru</option>
               <option value="repeat">👑 Repeat Order</option>
+              <option value="active">✅ Aktif</option>
+              <option value="soon">⏳ Segera Habis</option>
+              <option value="expired">⌛ Expired</option>
             </select>
             <input class="search" id="search" placeholder="🔎 Cari data..." oninput="scheduleRenderTx()" style="max-width:180px">
           </div>
         </div>
-      <div class="tablewrap"><table><thead><tr><th>Tanggal</th><th>Pelanggan</th><th>Produk</th><th>Paket</th><th>Jual</th><th>Modal</th><th>Profit</th><th>Expired</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="txTable"></tbody></table></div></div>
+      <div class="tablewrap"><table><thead><tr><th data-sort="date" tabindex="0">Tanggal</th><th data-sort="customer" tabindex="0">Pelanggan</th><th data-sort="product" tabindex="0">Produk</th><th>Paket</th><th data-sort="price" tabindex="0">Jual</th><th>Modal</th><th data-sort="profit" tabindex="0">Profit</th><th data-sort="expire" tabindex="0">Expired</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="txTable"></tbody></table></div></div>
     </section>
 
     <section id="pelanggan" class="page">
