@@ -76,7 +76,54 @@
     };
   }
 
-  /* ---------- 5) Tema Lemon Soda & Mocha Latte: kini terdaftar langsung di app.js (THEMES) dan index.html (ikon) ---------- */
+  /* ---------- 5) Tema baru: Lemon Soda & Mocha Latte ----------
+   * Hanya menambah pilihan ke menu tema yang sudah ada; warnanya ada di style.css. */
+  (function () {
+    var pop = byId('themePop');
+    if (!pop) return;
+    var NEW = [['lemon', 'Lemon Soda', '#4cc0ac', '#ffeea0'], ['mocha', 'Mocha Latte', '#c1917a', '#f3dccd']];
+
+    var face = '<g stroke="none"><circle cx="CX1" cy="CY" r="1.5" fill="#6b4a5a"/><circle cx="CX2" cy="CY" r="1.5" fill="#6b4a5a"/>' +
+      '<ellipse cx="CH1" cy="CHY" rx="2" ry="1.2" fill="#ff9fbd" opacity=".6"/><ellipse cx="CH2" cy="CHY" rx="2" ry="1.2" fill="#ff9fbd" opacity=".6"/></g>';
+    var lemonFace = face.replace('CX1', '12').replace('CX2', '20').replace(/CY/g, '16').replace('CH1', '9.3').replace('CH2', '22.7').replace(/CHY/g, '19');
+    var sprite =
+      '<svg width="0" height="0" style="position:absolute" aria-hidden="true">' +
+      '<symbol id="th-lemon" viewBox="0 0 32 32"><g stroke="#9a7384" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round">' +
+        '<path d="M2.5 16Q4.500 8 16 7Q27.500 8 29.500 16Q27.500 24 16 25Q4.500 24 2.500 16Z" fill="#fff0a8"/>' +
+        '<path d="M16 7c0-3 2.500-5 6.500-5-.3 3.600-2.700 5.400-6.500 5Z" fill="#c9e8bf"/>' + lemonFace +
+        '<path d="M14.600 18.200q1.400 1.700 2.800 0" fill="none"/></g></symbol>' +
+      '<symbol id="th-mocha" viewBox="0 0 32 32"><g stroke="#9a7384" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round">' +
+        '<circle cx="7.500" cy="8" r="4.300" fill="#e6c9b0"/><circle cx="24.500" cy="8" r="4.300" fill="#e6c9b0"/>' +
+        '<circle cx="7.500" cy="8" r="1.900" fill="#f3dccd" stroke="none"/><circle cx="24.500" cy="8" r="1.900" fill="#f3dccd" stroke="none"/>' +
+        '<circle cx="16" cy="17.500" r="11.500" fill="#ecd2bb"/><ellipse cx="16" cy="21.500" rx="5.200" ry="3.700" fill="#fff3e8"/>' +
+        '<g stroke="none"><circle cx="11.300" cy="15.500" r="1.500" fill="#6b4a5a"/><circle cx="20.700" cy="15.500" r="1.500" fill="#6b4a5a"/>' +
+        '<ellipse cx="8.300" cy="19.300" rx="2" ry="1.200" fill="#ff9fbd" opacity=".6"/><ellipse cx="23.700" cy="19.300" rx="2" ry="1.200" fill="#ff9fbd" opacity=".6"/>' +
+        '<ellipse cx="16" cy="20" rx="1.700" ry="1.200" fill="#6b4a5a"/></g>' +
+        '<path d="M14.400 22.600q1.600 1.500 3.200 0" fill="none"/></g></symbol></svg>';
+    var holder = document.createElement('div');
+    holder.innerHTML = sprite;
+    document.body.appendChild(holder.firstChild);
+
+    // Daftarkan ikon & urutan tema ke daftar milik app (objek/array yang sudah ada, hanya ditambah isinya)
+    try {
+      NEW.forEach(function (n) {
+        if (typeof themeIcons === 'object' && themeIcons) themeIcons[n[0]] = '<svg class="ic" aria-hidden="true"><use href="#th-' + n[0] + '"/></svg>';
+        if (typeof themeList !== 'undefined' && Array.isArray(themeList) && themeList.indexOf(n[0]) < 0) themeList.push(n[0]);
+      });
+    } catch (e) { /* abaikan */ }
+
+    // Swatch baru dipasang sebelum "Malam" supaya tema gelap tetap paling akhir
+    var darkBtn = pop.querySelector('[data-t="dark"]');
+    NEW.forEach(function (n) {
+      if (pop.querySelector('[data-t="' + n[0] + '"]')) return;
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'theme-sw'; b.setAttribute('role', 'menuitem');
+      b.dataset.t = n[0]; b.title = n[1]; b.setAttribute('aria-label', n[1]);
+      b.style.background = 'linear-gradient(135deg,' + n[2] + ' 50%,' + n[3] + ' 50%)';
+      pop.insertBefore(b, darkBtn || null);
+    });
+    try { if (typeof markTheme === 'function') markTheme(localStorage.getItem('theme') || 'light'); } catch (e) { /* abaikan */ }
+  })();
 
   /* ---------- 6) Kartu dashboard bisa diketuk ----------
    * Hanya memanggil page() milik app untuk pindah halaman; tidak ada data yang dibaca/ditulis. */
@@ -138,8 +185,7 @@
   })();
 
   /* ---------- 8) Kartu "Hari Ini" -> Transaksi hari ini saja ----------
-   * Penyaringan tampilan saja: app membaca window.lxTxFilter di renderTx() dan exportCSV(),
-   * sehingga tabel, nomor halaman, dan Export CSV selalu sepakat. Tidak ada query/tulis ke database. */
+   * Murni penyaringan tampilan (data yang sudah dimuat). Tidak ada query/tulis ke database. */
   (function () {
     var todayOn = false, keep = false;
     var panel = document.querySelector('#transaksi .panel'), wrapEl = panel && panel.querySelector('.tablewrap');
@@ -153,14 +199,28 @@
       var d = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
       txt.textContent = '📅 Hari ini · ' + d + ' · ' + (n ? n + ' transaksi' : 'belum ada transaksi');
     }
-    function setToday(on) {
-      todayOn = on; chip.hidden = !on;
-      window.lxTxFilter = on ? function (t) { return t.transaction_date === today(); } : null;
+    function setToday(on) { todayOn = on; chip.hidden = !on; }
+
+    var origRender = window.renderTx;
+    if (typeof origRender === 'function') {
+      window.renderTx = function () {
+        if (!todayOn || typeof txs === 'undefined' || typeof today !== 'function') return origRender.apply(this, arguments);
+        var saved = txs, d = today();
+        txs = saved.filter(function (t) { return t.transaction_date === d; });
+        label(txs.length);
+        try { return origRender.apply(this, arguments); }
+        finally { txs = saved; }
+      };
     }
 
-    document.addEventListener('lx:txrender', function (e) { if (todayOn) label(e.detail.count); });
     // Pindah halaman lewat menu = kembali melihat semua transaksi
-    document.addEventListener('lx:page', function () { if (!keep && todayOn) setToday(false); });
+    var origPage = window.page;
+    if (typeof origPage === 'function') {
+      window.page = function () {
+        if (!keep && todayOn) setToday(false);
+        return origPage.apply(this, arguments);
+      };
+    }
 
     chip.querySelector('.lx-today-x').addEventListener('click', function () {
       setToday(false);
@@ -172,8 +232,8 @@
       // "Hari ini" selalu ada di bulan berjalan; samakan pemilih bulan agar Edit/Hapus tetap menemukan barisnya
       var gm = byId('globalMonth'), cur = today().slice(0, 7);
       if (gm && gm.value !== cur && typeof changeMonth === 'function') { gm.value = cur; changeMonth(); }
-      var q = byId('search'), ft = byId('filterType'), fs = byId('filterStatus'), so = byId('txSort');
-      if (q) q.value = ''; if (ft) ft.value = 'all'; if (fs) fs.value = 'all'; if (so) so.value = 'new';
+      var q = byId('search'), ft = byId('filterType');
+      if (q) q.value = ''; if (ft) ft.value = 'all';
       if (typeof txPage !== 'undefined') txPage = 1;
       keep = true;
       try { setToday(true); page('transaksi'); }
@@ -187,59 +247,6 @@
     document.querySelectorAll('.kawaii-card .k-mini').forEach(function (el) {
       el.dataset.k = (el.textContent || '').trim().toLowerCase();
     });
-  })();
-
-  /* ---------- 10) Durasi: daftar pilihan (dropdown) di kolom durasi ----------
-   * Dipasang di form transaksi, form "Produk Baru" (di dalam transaksi), dan form Produk.
-   * Hanya menambah daftar saran pada kolom durasi yang sudah ada; tidak menyentuh data. */
-  (function () {
-    var PRESET = [7, 14, 30, 60, 90, 180, 365];
-    var NAMES = { 7: '1 minggu', 14: '2 minggu', 30: '1 bulan', 60: '2 bulan', 90: '3 bulan', 180: '6 bulan', 365: '1 tahun' };
-    var builders = [];
-
-    // Preset + durasi yang dipakai produk milikmu (paling sering dipakai dulu, maks. 5 tambahan)
-    function durations() {
-      var extra = {};
-      try {
-        if (typeof products !== 'undefined') products.forEach(function (p) {
-          var n = Number(p.duration_days);
-          if (Number.isInteger(n) && n > 0 && PRESET.indexOf(n) < 0) extra[n] = (extra[n] || 0) + 1;
-        });
-      } catch (e) { /* abaikan */ }
-      var more = Object.keys(extra).map(Number).sort(function (a, b) { return extra[b] - extra[a] || a - b; }).slice(0, 5);
-      return PRESET.concat(more).sort(function (a, b) { return a - b; });
-    }
-
-    function attach(dur, listId) {
-      if (!dur || !dur.parentNode) return;
-      var dl = document.createElement('datalist');
-      dl.id = listId;
-      dur.parentNode.insertBefore(dl, dur.nextSibling);
-      dur.setAttribute('list', listId);
-      dur.setAttribute('inputmode', 'numeric');
-      function build() {
-        var list = durations(), key = list.join(',');
-        if (dl.dataset.key === key) return;
-        dl.dataset.key = key;
-        dl.innerHTML = '';
-        list.forEach(function (n) {
-          var o = document.createElement('option');
-          o.value = String(n);
-          o.label = n + ' hari' + (NAMES[n] ? ' (' + NAMES[n] + ')' : '');
-          dl.appendChild(o);
-        });
-      }
-      builders.push(build);
-      build();
-    }
-    function refresh() { builders.forEach(function (f) { f(); }); }
-
-    attach(byId('fDuration'), 'fDurationList');
-    attach(byId('qProductDuration'), 'qProductDurationList');
-    attach(byId('pDuration'), 'pDurationList');
-
-    // Daftar disegarkan saat modal dibuka (produk baru bisa membawa durasi baru)
-    document.addEventListener('lx:txopen', refresh);
   })();
 
   /* ---------- 11) Warna header browser (theme-color) ikut tema ----------
@@ -325,8 +332,13 @@
       if (mine.length) {
         html = mine.map(function (p) { return item(p, String(p.id) === String(cur)); }).join('');
       } else if (all.length) {
-        // Nama produk dipilih lewat kolom di sebelahnya (ketik atau tombol Daftar); daftar ini khusus paketnya.
-        html = '<div class="lx-pk-hint">' + (name ? 'Produk “' + esc2(name) + '” belum terdaftar. Pakai “+ Produk Baru” ✨' : 'Pilih nama produk dulu di kolom sebelah 👆') + '</div>';
+        // Belum ada produk yang valid: tampilkan semua paket per produk, pilih sekali ketuk
+        var groups = {}, order = [];
+        all.forEach(function (p) { if (!groups[p.name]) { groups[p.name] = []; order.push(p.name); } groups[p.name].push(p); });
+        order.sort(function (a, b) { return String(a).localeCompare(String(b), 'id', { sensitivity: 'base' }); });
+        html = '<div class="lx-pk-hint">Pilih produk & paketnya sekaligus 👇</div>' + order.map(function (n) {
+          return '<div class="lx-pk-group">' + esc2(n) + '</div>' + groups[n].sort(byDur).map(function (p) { return item(p, false); }).join('');
+        }).join('');
       } else {
         html = '<div class="lx-pk-hint">Belum ada produk. Tambahkan lewat “+ Produk Baru” ✨</div>';
       }
@@ -366,7 +378,15 @@
     }
     var form = byId('txForm');
     if (form) ['input', 'change'].forEach(function (ev) { form.addEventListener(ev, function () { setTimeout(label, 0); }); });
-    document.addEventListener('lx:txopen', function () { close(); label(); });
+    var origOpen = window.openTx;
+    if (typeof origOpen === 'function') {
+      window.openTx = function () {
+        close();
+        var r = origOpen.apply(this, arguments);
+        setTimeout(label, 60);
+        return r;
+      };
+    }
     label();
   })();
   /* ---------- 13) Pemilih bulan yang manis ----------
@@ -468,5 +488,223 @@
     document.addEventListener('click', function (e) {
       if (!e.lxInside && !pop.hidden && !pop.contains(e.target) && !label.contains(e.target)) close(false);
     });
+  })();
+  /* ---------- 14) Kalender manis (tanggal) + daftar durasi manis ----------
+   * Keduanya melayang (position: fixed) di atas modal agar tidak terpotong.
+   * Memilih = mengisi kolom yang sudah ada lalu memicu event "input"/"change" yang sudah dipakai app
+   * (mis. #fStart onchange -> syncProduct/updateExpire, #fDuration oninput -> updateExpire).
+   * Tidak ada query/tulis ke database. */
+  (function () {
+    var coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    var ymd = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+    var MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    var EMO = ['❄️', '💝', '🌷', '🌦️', '🌼', '☀️', '🍉', '🌈', '🍂', '🎃', '🍄', '🎄'];
+    var WD = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+    var current = null;   // popover yang sedang terbuka: {kind, input, wrap, pop}
+
+    /* ----- posisi & buka/tutup ----- */
+    function place(pop, anchor) {
+      var r = anchor.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight;
+      var w = pop.offsetWidth, h = pop.offsetHeight, gap = 8;
+      var left = Math.min(Math.max(8, r.left), Math.max(8, vw - w - 8));
+      var top = r.bottom + gap;
+      if (top + h > vh - 8) { var up = r.top - gap - h; top = up >= 8 ? up : Math.max(8, vh - h - 8); }
+      pop.style.left = left + 'px'; pop.style.top = top + 'px';
+    }
+    function onMove() { if (current) place(current.pop, current.wrap); }
+    function closeAll() {
+      if (!current) return;
+      current.pop.hidden = true;
+      current.input.setAttribute('aria-expanded', 'false');
+      window.removeEventListener('scroll', onMove, true);
+      window.removeEventListener('resize', onMove);
+      current = null;
+    }
+    function show(kind, input, wrap, pop) {
+      closeAll();
+      pop.hidden = false;
+      current = { kind: kind, input: input, wrap: wrap, pop: pop };
+      input.setAttribute('aria-expanded', 'true');
+      window.addEventListener('scroll', onMove, true);
+      window.addEventListener('resize', onMove);
+    }
+    document.addEventListener('click', function (e) {
+      if (!current || e.lxFp) return;
+      if (current.pop.contains(e.target) || current.wrap.contains(e.target)) return;
+      closeAll();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && current) {
+        e.stopPropagation();
+        var inp = current.input; closeAll();
+        if (!coarse) inp.focus({ preventScroll: true });
+      }
+    }, true);
+
+    // Bungkus kolom + ikon manis di kanan (ikon asli browser disembunyikan lewat CSS)
+    function wrapInput(input, iconId) {
+      var wrap = document.createElement('div');
+      wrap.className = 'lx-dwrap';
+      input.parentNode.insertBefore(wrap, input);
+      wrap.appendChild(input);
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lx-dbtn';
+      btn.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#' + iconId + '"/></svg>';
+      wrap.appendChild(btn);
+      return { wrap: wrap, btn: btn };
+    }
+    var fire = function (inp) {
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+      inp.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    /* ===== Kalender ===== */
+    var cal = document.createElement('div');
+    cal.className = 'lx-fp lx-cal'; cal.hidden = true;
+    cal.setAttribute('role', 'dialog'); cal.setAttribute('aria-label', 'Pilih tanggal');
+    document.body.appendChild(cal);
+    var view = { y: 0, m: 0 };
+    var parse = function (v) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ''); return m ? { y: +m[1], m: +m[2] - 1 } : null; };
+
+    function renderCal() {
+      var sel = current.input.value, todayKey = ymd(new Date()), h = '';
+      var off = (new Date(view.y, view.m, 1).getDay() + 6) % 7;     // Senin = kolom pertama
+      h += '<div class="lx-cal-head">' +
+           '<button type="button" class="lx-cal-nav" data-n="-12" aria-label="Tahun sebelumnya">«</button>' +
+           '<button type="button" class="lx-cal-nav" data-n="-1" aria-label="Bulan sebelumnya">‹</button>' +
+           '<div class="lx-cal-title" aria-live="polite"><span aria-hidden="true">' + EMO[view.m] + '</span> ' + MONTHS[view.m] + ' ' + view.y + '</div>' +
+           '<button type="button" class="lx-cal-nav" data-n="1" aria-label="Bulan berikutnya">›</button>' +
+           '<button type="button" class="lx-cal-nav" data-n="12" aria-label="Tahun berikutnya">»</button></div>';
+      h += '<div class="lx-cal-wd">' + WD.map(function (d) { return '<span>' + d + '</span>'; }).join('') + '</div><div class="lx-cal-grid" role="grid">';
+      for (var i = 0; i < 42; i++) {
+        var d = new Date(view.y, view.m, 1 - off + i), k = ymd(d);
+        h += '<button type="button" class="lx-cal-d' + (d.getMonth() !== view.m ? ' out' : '') + (d.getDay() === 0 ? ' sun' : '') +
+             (k === todayKey ? ' today' : '') + (k === sel ? ' on' : '') + '" data-k="' + k + '" aria-pressed="' + (k === sel) +
+             '" aria-label="' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + '">' + d.getDate() + '</button>';
+      }
+      h += '</div><div class="lx-cal-foot"><button type="button" class="lx-cal-today">✨ Hari ini</button><button type="button" class="lx-cal-close">Tutup</button></div>';
+      cal.innerHTML = h;
+    }
+    function pickDate(k) {
+      var inp = current.input; closeAll();
+      inp.value = k; fire(inp);
+      if (!coarse) inp.focus({ preventScroll: true });
+    }
+    cal.addEventListener('click', function (e) {
+      e.lxFp = true;   // isi panel digambar ulang; jangan dianggap klik "di luar"
+      if (!current || current.kind !== 'date') return;
+      var nav = e.target.closest('.lx-cal-nav');
+      if (nav) {
+        var t = new Date(view.y, view.m + (+nav.dataset.n), 1);
+        view.y = t.getFullYear(); view.m = t.getMonth();
+        renderCal(); place(cal, current.wrap);
+        var again = cal.querySelector('.lx-cal-nav[data-n="' + nav.dataset.n + '"]');
+        if (again) again.focus({ preventScroll: true });
+        return;
+      }
+      var d = e.target.closest('.lx-cal-d');
+      if (d) { pickDate(d.dataset.k); return; }
+      if (e.target.closest('.lx-cal-today')) pickDate(ymd(new Date()));
+      else if (e.target.closest('.lx-cal-close')) closeAll();
+    });
+    cal.addEventListener('keydown', function (e) {
+      var days = [].slice.call(cal.querySelectorAll('.lx-cal-d')), i = days.indexOf(document.activeElement);
+      var step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e.key];
+      if (i >= 0 && step) { e.preventDefault(); var j = i + step; if (j >= 0 && j < days.length) days[j].focus(); }
+    });
+
+    ['fDate', 'fStart', 'fExpire'].forEach(function (id) {
+      var input = byId(id);
+      if (!input || !input.parentNode || input.parentNode.classList.contains('lx-dwrap')) return;
+      var w = wrapInput(input, 'i-cal-t');
+      w.btn.setAttribute('aria-label', 'Buka kalender');
+      input.setAttribute('aria-haspopup', 'dialog'); input.setAttribute('aria-expanded', 'false');
+      if (coarse) input.readOnly = true;   // HP: cegah kalender bawaan browser (nilai tetap bisa diisi lewat kode)
+      function open(focusDay) {
+        var p = parse(input.value) || parse(ymd(new Date()));
+        view.y = p.y; view.m = p.m;
+        show('date', input, w.wrap, cal);
+        renderCal(); place(cal, w.wrap);
+        if (focusDay) { var on = cal.querySelector('.lx-cal-d.on') || cal.querySelector('.lx-cal-d.today'); if (on) on.focus({ preventScroll: true }); }
+      }
+      input.addEventListener('click', function () { if (!(current && current.input === input)) open(false); });
+      w.btn.addEventListener('click', function () { if (current && current.input === input) closeAll(); else open(!coarse); });
+    });
+
+    /* ===== Daftar durasi ===== */
+    // Kolom durasi dihitung dalam hari: 1 bulan = 30 hari, 1 tahun = 365 hari
+    var OPTIONS = [
+      { d: 7,   t: '7 hari',   s: '1 minggu',  e: '🌱' },
+      { d: 14,  t: '14 hari',  s: '2 minggu',  e: '🌿' },
+      { d: 30,  t: '1 bulan',  s: '30 hari',   e: '🌸' },
+      { d: 365, t: '1 tahun',  s: '365 hari',  e: '🎂' }
+    ];
+    var dl = document.createElement('div');
+    dl.className = 'lx-fp lx-dl'; dl.hidden = true; dl.setAttribute('role', 'listbox'); dl.setAttribute('aria-label', 'Pilih durasi');
+    document.body.appendChild(dl);
+
+    function renderDl() {
+      var v = String(current.input.value).trim(), h = '';
+      OPTIONS.forEach(function (o) {
+        var on = String(o.d) === v;
+        h += '<button type="button" class="lx-dl-item' + (on ? ' on' : '') + '" role="option" aria-selected="' + on + '" data-d="' + o.d + '">' +
+             '<span class="lx-dl-name"><b>' + o.t + '</b><small>' + o.s + '</small></span>' +
+             '<span class="lx-dl-emo" aria-hidden="true">' + o.e + '</span></button>';
+      });
+      h += '<button type="button" class="lx-dl-item lx-dl-type" data-d="type"><span class="lx-dl-name"><b>Ketik durasi sendiri</b><small>angka lain dalam hari, misalnya 25</small></span>' +
+           '<span class="lx-dl-emo" aria-hidden="true">✏️</span></button>';
+      dl.innerHTML = h;
+    }
+    dl.addEventListener('click', function (e) {
+      e.lxFp = true;
+      if (!current || current.kind !== 'dur') return;
+      var b = e.target.closest('.lx-dl-item');
+      if (!b) return;
+      var inp = current.input; closeAll();
+      if (b.dataset.d === 'type') {
+        inp.setAttribute('inputmode', 'numeric');
+        inp.blur(); inp.focus();
+        try { inp.select(); } catch (err) { /* abaikan */ }
+        return;
+      }
+      inp.value = b.dataset.d; fire(inp);   // fDuration -> updateExpire() milik app
+    });
+    dl.addEventListener('keydown', function (e) {
+      var items = [].slice.call(dl.querySelectorAll('.lx-dl-item')), i = items.indexOf(document.activeElement);
+      var step = { ArrowUp: -1, ArrowDown: 1 }[e.key];
+      if (i >= 0 && step) { e.preventDefault(); var j = i + step; if (j >= 0 && j < items.length) items[j].focus(); }
+    });
+
+    ['fDuration', 'qProductDuration', 'pDuration'].forEach(function (id) {
+      var input = byId(id);
+      if (!input || !input.parentNode || input.parentNode.classList.contains('lx-dwrap')) return;
+      var w = wrapInput(input, 'i-clock-t');
+      w.btn.setAttribute('aria-label', 'Buka daftar durasi');
+      input.removeAttribute('list');
+      input.setAttribute('aria-haspopup', 'listbox'); input.setAttribute('aria-expanded', 'false');
+      input.setAttribute('inputmode', coarse ? 'none' : 'numeric');   // HP: ketuk = daftar, bukan keyboard
+      function open(focusItem) {
+        if (coarse) input.setAttribute('inputmode', 'none');
+        show('dur', input, w.wrap, dl);
+        renderDl(); place(dl, w.wrap);
+        if (focusItem) { var on = dl.querySelector('.lx-dl-item.on') || dl.querySelector('.lx-dl-item'); if (on) on.focus({ preventScroll: true }); }
+      }
+      input.addEventListener('click', function () { if (!(current && current.input === input)) open(false); });
+      input.addEventListener('input', function () { if (current && current.input === input) closeAll(); });   // mulai mengetik -> daftar menutup
+      w.btn.addEventListener('click', function () { if (current && current.input === input) closeAll(); else open(!coarse); });
+    });
+
+    // Tutup bila modal ditutup / dibuka ulang
+    var origOpen = window.openTx;
+    if (typeof origOpen === 'function') {
+      window.openTx = function () { closeAll(); return origOpen.apply(this, arguments); };
+    }
+    var modal = byId('modal');
+    if (modal && window.MutationObserver) {
+      new MutationObserver(function () {
+        if (current && getComputedStyle(modal).display === 'none') closeAll();
+      }).observe(modal, { attributes: true, attributeFilter: ['class', 'style'] });
+    }
   })();
 })();
