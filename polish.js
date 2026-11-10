@@ -172,8 +172,8 @@
       // "Hari ini" selalu ada di bulan berjalan; samakan pemilih bulan agar Edit/Hapus tetap menemukan barisnya
       var gm = byId('globalMonth'), cur = today().slice(0, 7);
       if (gm && gm.value !== cur && typeof changeMonth === 'function') { gm.value = cur; changeMonth(); }
-      var q = byId('search'), ft = byId('filterType');
-      if (q) q.value = ''; if (ft) ft.value = 'all';
+      var q = byId('search'), ft = byId('filterType'), fs = byId('filterStatus'), so = byId('txSort');
+      if (q) q.value = ''; if (ft) ft.value = 'all'; if (fs) fs.value = 'all'; if (so) so.value = 'new';
       if (typeof txPage !== 'undefined') txPage = 1;
       keep = true;
       try { setToday(true); page('transaksi'); }
