@@ -707,4 +707,34 @@
       }).observe(modal, { attributes: true, attributeFilter: ['class', 'style'] });
     }
   })();
+
+  /* ---------- 15) Ketik durasi -> paket, harga & modal ikut berubah ----------
+   * Saat durasi (hari) diketik/dipilih di form Tambah Transaksi, cari paket produk yang sama
+   * dengan durasi persis itu. Bila ada, paket dipilih otomatis lalu syncProduct() milik app
+   * mengisi ulang harga jual, modal, dan tanggal expired. Bila tidak ada paket yang cocok,
+   * isian tidak diubah (hanya tanggal expired yang ikut, seperti sebelumnya).
+   * Tidak aktif saat mengedit transaksi lama, supaya harga lama tidak tertimpa.
+   * Tidak ada query/tulis ke database. */
+  (function () {
+    var dur = byId('fDuration'), sel = byId('fProduct'), nameIn = byId('fProductName');
+    if (!dur || !sel || !nameIn) return;
+
+    dur.addEventListener('input', function () {
+      try {
+        if (typeof editId !== 'undefined' && editId) return;                  // mode edit: jangan ubah harga
+        if (typeof products === 'undefined' || !Array.isArray(products)) return;
+        var d = Number(dur.value);
+        if (!Number.isInteger(d) || d < 1) return;
+        var name = (nameIn.value || '').trim();
+        if (!name) return;
+        var matches = products.filter(function (p) { return p.name === name && Number(p.duration_days) === d; });
+        if (!matches.length) return;                                          // durasi custom: biarkan apa adanya
+        var cur = matches.filter(function (p) { return String(p.id) === String(sel.value); })[0];
+        if (cur) return;                                                      // paket terpilih sudah cocok
+        sel.value = String(matches[0].id);
+        if (typeof syncProduct === 'function') syncProduct();                 // isi paket, harga, modal, expired
+        sel.dispatchEvent(new Event('change', { bubbles: true }));            // segarkan label pilihan paket
+      } catch (e) { /* abaikan */ }
+    });
+  })();
 })();
