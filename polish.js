@@ -676,7 +676,12 @@
       if (i >= 0 && step) { e.preventDefault(); var j = i + step; if (j >= 0 && j < items.length) items[j].focus(); }
     });
 
-    ['fDuration', 'qProductDuration', 'pDuration'].forEach(function (id) {
+    // Durasi di form transaksi (#fDuration) sengaja tanpa daftar pilihan: cukup diketik manual,
+    // lalu bagian 15 di bawah menyesuaikan paket/harga/modal. Daftar tetap dipakai di form produk.
+    var fDur = byId('fDuration');
+    if (fDur) { fDur.removeAttribute('list'); fDur.setAttribute('inputmode', 'numeric'); }
+
+    ['qProductDuration', 'pDuration'].forEach(function (id) {
       var input = byId(id);
       if (!input || !input.parentNode || input.parentNode.classList.contains('lx-dwrap')) return;
       var w = wrapInput(input, 'i-clock-t');
