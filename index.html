@@ -207,7 +207,7 @@
     <section id="expired" class="page">
       <div class="top">
         <div><h1>Expired <svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg></h1><div class="muted">Masa aktif dari seluruh histori, termasuk transaksi bulan sebelumnya.</div></div>
-        <button class="btn light" style="color:var(--red); border:1px solid #ffd9e8" onclick="bulkDeleteExpired()"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-broom"/></svg> Sapu Bersih</button>
+        <button class="btn light" style="color:var(--red); border:1px solid #ffd9e8" title="Backup lengkap diunduh otomatis sebelum menghapus" onclick="bulkDeleteExpired()"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-broom"/></svg> Sapu Bersih</button>
       </div>
       <div class="cards" id="expiredCards"><div class="card"><div class="label">Hari Ini</div><div class="value red" id="eToday">0</div></div><div class="card"><div class="label">1–3 Hari Lagi</div><div class="value" id="eSoon">0</div></div><div class="card"><div class="label">Aktif</div><div class="value green" id="eActive">0</div></div><div class="card"><div class="label">Sudah Expired</div><div class="value" id="ePast">0</div></div></div>
       <div class="panel"><div class="tablewrap"><table><thead><tr><th>Pelanggan</th><th>Produk</th><th>Paket</th><th>Mulai</th><th>Expired</th><th>Sisa Durasi</th><th>Status</th></tr></thead><tbody id="expTable"></tbody></table></div></div>
