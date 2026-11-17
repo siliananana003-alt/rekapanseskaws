@@ -50,10 +50,11 @@
     el.dataset.old = days >= 7 ? '1' : '';
   }
 
+  // Mengembalikan true bila file backup berhasil dibuat, false bila gagal / sedang berjalan.
   async function runBackup() {
-    if (running) return;
+    if (running) return false;
     var btn = byId('btnBackup');
-    if (typeof db === 'undefined' || !db) { say('Koneksi belum siap. Login dulu ya.'); return; }
+    if (typeof db === 'undefined' || !db) { say('Koneksi belum siap. Login dulu ya.'); return false; }
     running = true;
     var label = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = 'Mengambil data…'; }
@@ -83,9 +84,11 @@
       var skippedNames = Object.keys(out.skipped);
       say('Backup selesai: ' + out.counts.transactions + ' transaksi, ' + out.counts.products + ' produk' +
         (skippedNames.length ? ' (tabel ' + skippedNames.join(', ') + ' dilewati)' : '') + ' ✨');
+      return true;
     } catch (err) {
       console.error('Backup gagal:', err);
       say('Backup gagal: ' + (err && err.message ? err.message : 'periksa koneksi lalu coba lagi'));
+      return false;
     } finally {
       running = false;
       if (btn) { btn.disabled = false; btn.textContent = label || 'Backup Sekarang'; }
@@ -93,6 +96,39 @@
   }
 
   window.lxBackupAll = runBackup;
+
+  /* ---------- Sapu Bersih: backup lengkap wajib sebelum menghapus ----------
+   * Fungsi asli (bulkDeleteExpired di app.js) tidak diubah, hanya dibungkus:
+   *  1. Hitung dulu transaksi yang akan dihapus (kriteria sama dengan fungsi asli).
+   *  2. Bila tidak ada, langsung panggil fungsi asli (ia akan menampilkan "aman").
+   *  3. Bila ada, backup lengkap harus berhasil dulu. Gagal = penghapusan dibatalkan.
+   *  4. Setelah itu fungsi asli berjalan seperti biasa, termasuk dialog konfirmasinya. */
+  var origSweep = window.bulkDeleteExpired;
+  if (typeof origSweep === 'function') {
+    var sweeping = false;
+    window.bulkDeleteExpired = async function () {
+      if (sweeping) return;
+      sweeping = true;
+      try {
+        var ready = typeof customerProfilesLoaded !== 'undefined' && customerProfilesLoaded;
+        if (!ready || typeof db === 'undefined' || !db || typeof localDateString !== 'function') {
+          return await origSweep.apply(this, arguments);   // fungsi asli yang menangani pesan/penolakannya
+        }
+        var cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - 30);
+        var res = await db.from('transactions').select('id', { count: 'exact', head: true }).lt('expire_date', localDateString(cutoff));
+        if (res.error) { say('Gagal memeriksa transaksi expired: ' + res.error.message); return; }
+        if (!res.count) return await origSweep.apply(this, arguments);
+
+        say('Sebelum dihapus, backup lengkap diunduh dulu 🛟');
+        var ok = await runBackup();
+        if (!ok) { say('Penghapusan dibatalkan karena backup gagal. Tidak ada data yang dihapus.'); return; }
+        return await origSweep.apply(this, arguments);
+      } finally {
+        sweeping = false;
+      }
+    };
+  }
 
   function init() {
     var btn = byId('btnBackup');
