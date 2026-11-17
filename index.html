@@ -17,6 +17,8 @@
 <script src="config.js"></script>
 <script defer src="app.js"></script>
 <script defer src="polish.js"></script>
+<script defer src="safety.js"></script>
+<script defer src="backup.js"></script>
 <link rel="stylesheet" href="style.css">
 
 </head>
@@ -245,6 +247,12 @@
                     <div class="settings-box" style="grid-column:1/-1">
             <h3><svg class="ic ic-sm" aria-hidden="true"><use href="#i-target"/></svg> Target Omzet</h3><p>Target omzet yang digunakan pada progress dashboard.</p>
             <div class="settings-row"><strong id="settingsTarget">Rp0</strong><button class="btn light" onclick="editTarget(); renderSettings()">Edit Target</button></div>
+          </div>
+          <div class="settings-box" style="grid-column:1/-1">
+            <h3><svg class="ic ic-sm" aria-hidden="true"><use href="#i-box"/></svg> Backup Data</h3>
+            <p>Unduh seluruh transaksi, produk, dan profil pelanggan ke satu file JSON. Disarankan seminggu sekali.</p>
+            <div class="settings-row"><span id="backupStatus" class="customer-meta">Memeriksa…</span><button type="button" id="btnBackup" class="btn">Backup Sekarang</button></div>
+            <p class="backup-warn">File ini berisi nomor WhatsApp pelanggan. Simpan di tempat aman dan jangan dibagikan.</p>
           </div>
           <div class="settings-box" style="grid-column:1/-1"><h3><svg class="ic" aria-hidden="true"><use href="#i-door"/></svg> Akun</h3><p>Keluar dari akun di perangkat ini.</p><div class="settings-row"><span class="customer-meta">Sampai jumpa lagi~</span><button class="btn light" onclick="doLogout()">Keluar</button></div></div>
         </div>
