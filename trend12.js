@@ -1,7 +1,12 @@
 /* LiXi trend 12 bulan — membaca tabel ringkasan bulanan (lihat trend_12bulan.sql).
  * Tidak mengubah app.js. Bila tabel ringkasan belum ada / gagal dibaca, grafik 3 bulan bawaan tetap jalan.
  * Pasang SETELAH backup.js dan resilience.js:  <script defer src="trend12.js"></script>
- * Memakai global milik app: db, rupiah, monthLabel, shiftMonth, monthKeyFromInput, pctChange, getCSS, $ */
+ * Memakai global milik app: db, rupiah, monthLabel, shiftMonth, monthKeyFromInput, pctChange, getCSS, $
+ *
+ * Selain grafik, file ini menambal angka bulan lama yang menyusut setelah Sapu Bersih: bila ringkasan bulanan
+ * lebih lengkap daripada transaksi yang masih ada, Dashboard ("bulan ini", target, gelas), kartu Insight
+ * ("Vs bulan lalu", rata-rata profit, produk terlaris) dan Laporan (omzet/modal/profit/margin, profit per produk)
+ * memakai ringkasan. Daftar pelanggan/pembeli tetap dari transaksi yang tersisa. */
 (function () {
   'use strict';
 
@@ -10,6 +15,7 @@
   var products = null;       // [{month, product_name, omzet, cost, tx_count}]
   var loadingPromise = null;  // permintaan yang sedang berjalan (satu pada satu waktu)
   var requestedKey = null;    // rentang terbaru yang diminta; dipakai agar permintaan basi diulang
+  var loadedFrom = null;      // awal rentang ringkasan yang sudah dimuat (tanpa batas atas)
 
   function num(v) { return Number(v) || 0; }
 
@@ -36,27 +42,128 @@
       (a.data || []).forEach(function (r) { map[r.month] = { omzet: num(r.omzet), cost: num(r.cost), count: num(r.tx_count) }; });
       summary = map;
       products = b.data || [];
+      loadedFrom = startKey;
     } catch (e) {
-      summary = null; products = null;
+      summary = null; products = null; loadedFrom = null;
       console.warn('Ringkasan bulanan belum tersedia, memakai grafik 3 bulan bawaan:', e && e.message ? e.message : e);
     }
   }
 
   // Bila bulan diganti saat permintaan masih berjalan, permintaan itu diulang untuk rentang terbaru
   // (sebelumnya panggilan kedua dibuang dan grafik memakai rentang lama).
-  function refreshSummary() {
-    if (typeof db === 'undefined' || !db) return Promise.resolve();
+  // Resolve true bila data diambil ulang (perlu menggambar ulang), false bila rentang sudah tercakup.
+  // force = true setelah data transaksi berubah; pergantian bulan ke rentang yang sudah termuat tidak perlu query lagi.
+  function refreshSummary(force) {
+    if (typeof db === 'undefined' || !db) return Promise.resolve(false);
     requestedKey = shiftMonth(monthKeyFromInput(), -(MONTHS + 1));
     if (loadingPromise) return loadingPromise;
+    if (!force && summary && loadedFrom && requestedKey >= loadedFrom) return Promise.resolve(false);
     loadingPromise = (async function () {
       try {
         var key;
         do { key = requestedKey; await fetchRange(key); } while (key !== requestedKey);
+        return true;
       } finally {
         loadingPromise = null;
       }
     })();
     return loadingPromise;
+  }
+
+  /* ---------- Angka bulan lama setelah Sapu Bersih ----------
+   * Sapu Bersih menghapus transaksi yang expired > 30 hari, sehingga total bulan lama yang dihitung dari
+   * transaksi menyusut. Ringkasan bulanan dipakai HANYA bila: (a) bulan itu mulai lebih dari 30 hari lalu
+   * (hanya bulan seperti itu yang bisa terkena Sapu Bersih) dan (b) jumlah transaksinya lebih banyak
+   * daripada yang masih ada. Selain itu angka tetap dari transaksi, jadi bulan berjalan tidak berubah. */
+  function mayHaveBeenSwept(key) {
+    var c = new Date(); c.setDate(c.getDate() - 30);
+    return key + '-01' < localDateString(c);
+  }
+  function monthTotals(key) {
+    var arr = monthTx(key), om = 0, co = 0;
+    arr.forEach(function (t) { om += +t.price || 0; co += +t.cost || 0; });
+    var s = summary && summary[key];
+    if (s && s.count > arr.length && mayHaveBeenSwept(key)) return { omzet: s.omzet, cost: s.cost, count: s.count, fromSummary: true };
+    return { omzet: om, cost: co, count: arr.length, fromSummary: false };
+  }
+  function monthProducts(key) {
+    return (products || []).filter(function (p) { return p.month === key && num(p.tx_count) > 0; })
+      .map(function (p) { return { name: p.product_name || 'Produk', count: num(p.tx_count), profit: num(p.omzet) - num(p.cost) }; });
+  }
+  function put(id, text) { var el = document.getElementById(id); if (el) el.textContent = text; return el; }
+
+  function fixDash() {
+    var t = monthTotals(monthKeyFromInput());
+    if (!t.fromSummary) return;
+    var profit = t.omzet - t.cost;
+    put('dOmzet', rupiah(t.omzet)); put('dProfit', rupiah(profit)); put('dCount', t.count + ' Trx');
+    var target = getTarget(), pct = Math.min((t.omzet / target) * 100, 100);
+    put('goalText', hideMoney ? 'Rp •••••• / Rp •••••• (' + pct.toFixed(1) + '%)' : rupiah(t.omzet) + ' / ' + rupiah(target) + ' (' + pct.toFixed(1) + '%)');
+    var fill = document.getElementById('goalFill');
+    if (fill) { fill.style.width = pct + '%'; fill.style.backgroundColor = pct >= 100 ? 'var(--green)' : 'var(--p)'; }
+    if (typeof updateGoalDecor === 'function') updateGoalDecor(pct);
+    var pos = Math.max(profit, 0), total = pos + t.cost;
+    put('dChartOmzet', rupiah(t.omzet)); put('dChartProfit', rupiah(pos)); put('dChartCost', rupiah(t.cost));
+    put('dChartPct', (total > 0 ? Math.round(pos / total * 100) : 0) + '% profit');
+  }
+
+  function fixInsight() {
+    var curKey = monthKeyFromInput(), prevKey = shiftMonth(curKey, -1);
+    var cur = monthTotals(curKey), prev = monthTotals(prevKey);
+    if (!cur.fromSummary && !prev.fromSummary) return;
+    if (cur.fromSummary) {
+      put('insAvgProfit', rupiah(cur.count ? (cur.omzet - cur.cost) / cur.count : 0));
+      var top = monthProducts(curKey).sort(function (a, b) { return b.count - a.count || b.profit - a.profit; })[0];
+      if (top) { put('insTopProduct', top.name); put('insTopProductNote', top.count + ' transaksi • ' + rupiah(top.profit) + ' profit'); }
+    }
+    var ch = pctChange(cur.omzet, prev.omzet), el = put('insMonthChange', (ch > 0 ? '+' : '') + ch + '%');
+    if (el) el.style.color = ch > 0 ? 'var(--green)' : ch < 0 ? 'var(--red)' : 'var(--muted)';
+    put('insMonthChangeNote', 'Omzet vs ' + monthLabel(prevKey) + ' • ' + rupiah(prev.omzet) + (prev.fromSummary ? ' (ringkasan bulanan)' : ''));
+  }
+
+  function sweepNote(show) {
+    var box = document.getElementById('lxSweepNote'), cards = document.getElementById('laporanSummaryCards');
+    if (!box && show && cards && cards.parentNode) {
+      box = document.createElement('div');
+      box.id = 'lxSweepNote';
+      box.style.cssText = 'margin:0 0 12px;padding:8px 14px;border-radius:16px;border:2px dashed var(--p3);background:var(--p2);font-size:12px;font-weight:700;color:var(--ink)';
+      box.textContent = 'Sebagian transaksi bulan ini sudah dibersihkan (Sapu Bersih). Omzet, modal, profit, dan profit per produk memakai ringkasan bulanan; daftar pembeli hanya dari transaksi yang masih tersimpan.';
+      cards.parentNode.insertBefore(box, cards);
+    }
+    if (box) box.style.display = show ? 'block' : 'none';
+  }
+  function fixReport() {
+    var key = monthKeyFromInput(), t = monthTotals(key);
+    sweepNote(t.fromSummary);
+    if (!t.fromSummary) return;
+    var profit = t.omzet - t.cost;
+    put('rOmzet', rupiah(t.omzet)); put('rCost', rupiah(t.cost)); put('rProfit', rupiah(profit));
+    put('rMargin', t.omzet ? Math.round(profit / t.omzet * 100) + '%' : '0%');
+    var list = document.getElementById('rProducts'), rows = monthProducts(key).sort(function (a, b) { return b.profit - a.profit; });
+    if (list && rows.length) {
+      list.innerHTML = rows.map(function (p) {
+        return '<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line)"><b>' + esc(p.name) + '</b><strong class="green">' + rupiah(p.profit) + '</strong></div>';
+      }).join('');
+    }
+  }
+
+  function wrap(name, fix) {
+    var orig = window[name];
+    if (typeof orig !== 'function') return;
+    window[name] = function () {
+      var r = orig.apply(this, arguments);
+      try { if (summary) fix(); } catch (e) { console.warn('Penyesuaian ringkasan (' + name + ') gagal:', e); }
+      return r;
+    };
+  }
+  wrap('renderDash', fixDash);
+  wrap('renderLixiInsight', fixInsight);
+  wrap('renderReport', fixReport);
+
+  // Setelah ringkasan tiba, gambar ulang halaman yang menampilkan angka bulanan.
+  function rerender() {
+    var p = document.querySelector('.page.show'), id = p && p.id;
+    if ((id === 'dashboard' || id === 'laporan') && typeof window.renderCurrentPage === 'function') window.renderCurrentPage();
   }
 
   function noteBox() {
@@ -140,10 +247,7 @@
   if (typeof origProfiles === 'function') {
     window.loadCustomerProfiles = async function () {
       var r = await origProfiles.apply(this, arguments);
-      refreshSummary().then(function () {
-        var rep = document.getElementById('laporan');
-        if (rep && rep.classList.contains('show') && typeof window.renderTrendChart === 'function') window.renderTrendChart();
-      });
+      refreshSummary(true).then(rerender);
       return r;
     };
   }
@@ -153,7 +257,7 @@
   if (typeof origChange === 'function') {
     window.changeMonth = function () {
       var r = origChange.apply(this, arguments);
-      refreshSummary().then(function () { if (typeof window.renderTrendChart === 'function') window.renderTrendChart(); });
+      refreshSummary(false).then(function (fetched) { if (fetched) rerender(); });
       return r;
     };
   }
