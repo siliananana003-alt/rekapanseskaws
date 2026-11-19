@@ -8,7 +8,11 @@
     { name: 'products', order: 'id', required: true },
     { name: 'transactions', order: 'id', required: true },
     // Tabel ini baru ada setelah SQL migrasi profil dijalankan; bila belum ada, dilewati.
-    { name: 'lixi_customer_profiles', order: 'customer_wa', required: false }
+    // sweepRequired: tabel opsional, tetapi WAJIB ikut ter-backup sebelum Sapu Bersih (menyimpan jumlah pembelian permanen).
+    { name: 'lixi_customer_profiles', order: 'customer_wa', required: false, sweepRequired: true },
+    // Ringkasan bulanan untuk tren 12 bulan; dilewati bila belum dibuat.
+    { name: 'lixi_monthly_summary', order: 'month', required: false },
+    { name: 'lixi_monthly_product_summary', order: ['month', 'product_name'], required: false }
   ];
   var PAGE = 1000;
   var KEY = 'lixiLastBackup';
@@ -25,7 +29,9 @@
   async function fetchAll(table, order) {
     var rows = [], offset = 0;
     while (true) {
-      var res = await db.from(table).select('*').order(order, { ascending: true }).range(offset, offset + PAGE - 1);
+      var q = db.from(table).select('*');
+      [].concat(order).forEach(function (col) { q = q.order(col, { ascending: true }); });
+      var res = await q.range(offset, offset + PAGE - 1);
       if (res.error) throw res.error;
       var batch = res.data || [];
       rows.push.apply(rows, batch);
@@ -51,7 +57,9 @@
   }
 
   // Mengembalikan true bila file backup berhasil dibuat, false bila gagal / sedang berjalan.
-  async function runBackup() {
+  // opts.strict = true (dipakai Sapu Bersih): tabel bertanda sweepRequired tidak boleh dilewati.
+  async function runBackup(opts) {
+    var strict = !!(opts && opts.strict === true);   // klik tombol mengirim Event, bukan opsi
     if (running) return false;
     var btn = byId('btnBackup');
     if (typeof db === 'undefined' || !db) { say('Koneksi belum siap. Login dulu ya.'); return false; }
@@ -66,7 +74,7 @@
           out.data[t.name] = await fetchAll(t.name, t.order);
           out.counts[t.name] = out.data[t.name].length;
         } catch (err) {
-          if (t.required) throw new Error('Tabel ' + t.name + ': ' + (err && err.message ? err.message : err));
+          if (t.required || (strict && t.sweepRequired)) throw new Error('Tabel ' + t.name + ': ' + (err && err.message ? err.message : err));
           out.skipped[t.name] = err && err.message ? err.message : String(err);
           out.data[t.name] = [];
           out.counts[t.name] = 0;
@@ -121,7 +129,7 @@
         if (!res.count) return await origSweep.apply(this, arguments);
 
         say('Sebelum dihapus, backup lengkap diunduh dulu 🛟');
-        var ok = await runBackup();
+        var ok = await runBackup({ strict: true });
         if (!ok) { say('Penghapusan dibatalkan karena backup gagal. Tidak ada data yang dihapus.'); return; }
         return await origSweep.apply(this, arguments);
       } finally {
