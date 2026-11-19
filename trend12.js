@@ -8,15 +8,26 @@
   var MONTHS = 12;
   var summary = null;        // { 'YYYY-MM': {omzet, cost, count} } atau null bila tidak tersedia
   var products = null;       // [{month, product_name, omzet, cost, tx_count}]
-  var loading = false;
+  var loadingPromise = null;  // permintaan yang sedang berjalan (satu pada satu waktu)
+  var requestedKey = null;    // rentang terbaru yang diminta; dipakai agar permintaan basi diulang
 
   function num(v) { return Number(v) || 0; }
 
-  async function refreshSummary() {
-    if (loading || typeof db === 'undefined' || !db) return;
-    loading = true;
+  // Judul kartu mengikuti isi grafik: 12 bulan bila ringkasan tersedia, 3 bulan (bawaan) bila tidak.
+  function setLabels(n) {
+    var wrap = document.getElementById('trendChartWrap');
+    var head = wrap && wrap.parentNode && wrap.parentNode.querySelector('.trend-head');
+    if (!head) return;
+    var h2 = head.querySelector('h2');
+    if (h2) for (var i = 0; i < h2.childNodes.length; i++) {
+      if (h2.childNodes[i].nodeType === 3) { h2.childNodes[i].nodeValue = 'Analitik Tren ' + n + ' Bulan '; break; }
+    }
+    var badge = head.querySelector('.insight-badge');
+    if (badge) badge.textContent = n + ' BULAN';
+  }
+
+  async function fetchRange(startKey) {
     try {
-      var startKey = shiftMonth(monthKeyFromInput(), -(MONTHS + 1));
       var a = await db.from('lixi_monthly_summary').select('month,tx_count,omzet,cost').gte('month', startKey).order('month');
       if (a.error) throw a.error;
       var b = await db.from('lixi_monthly_product_summary').select('month,product_name,tx_count,omzet,cost').gte('month', startKey);
@@ -28,9 +39,24 @@
     } catch (e) {
       summary = null; products = null;
       console.warn('Ringkasan bulanan belum tersedia, memakai grafik 3 bulan bawaan:', e && e.message ? e.message : e);
-    } finally {
-      loading = false;
     }
+  }
+
+  // Bila bulan diganti saat permintaan masih berjalan, permintaan itu diulang untuk rentang terbaru
+  // (sebelumnya panggilan kedua dibuang dan grafik memakai rentang lama).
+  function refreshSummary() {
+    if (typeof db === 'undefined' || !db) return Promise.resolve();
+    requestedKey = shiftMonth(monthKeyFromInput(), -(MONTHS + 1));
+    if (loadingPromise) return loadingPromise;
+    loadingPromise = (async function () {
+      try {
+        var key;
+        do { key = requestedKey; await fetchRange(key); } while (key !== requestedKey);
+      } finally {
+        loadingPromise = null;
+      }
+    })();
+    return loadingPromise;
   }
 
   function noteBox() {
@@ -46,7 +72,8 @@
     return box;
   }
 
-  function drawFromSummary(origRender) {
+  function drawFromSummary() {
+    setLabels(MONTHS);
     var curKey = monthKeyFromInput();
     var keys = [];
     for (var i = MONTHS - 1; i >= 0; i--) keys.push(shiftMonth(curKey, -i));
@@ -103,7 +130,7 @@
   if (typeof origTrend === 'function') {
     window.renderTrendChart = function () {
       var r = origTrend.apply(this, arguments);        // buat/siapkan grafik bawaan dulu
-      try { if (summary) drawFromSummary(origTrend); } catch (e) { console.warn('Tren 12 bulan gagal digambar:', e); }
+      try { if (summary) drawFromSummary(); else setLabels(3); } catch (e) { console.warn('Tren 12 bulan gagal digambar:', e); }
       return r;
     };
   }
