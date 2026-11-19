@@ -10,6 +10,7 @@
   var STALE_MS = 5 * 60 * 1000;   // muat ulang bila tab disembunyikan > 5 menit
   var hiddenAt = 0;
   var bar = null;
+  var failed = false;   // true bila ada kegagalan muat sejak retry() dimulai
 
   function ensureBar() {
     if (bar) return bar;
@@ -30,6 +31,7 @@
     return bar;
   }
   function showBanner(text) {
+    failed = true;
     var b = ensureBar();
     b.querySelector('.lx-banner-msg').textContent = text;
     b.style.display = 'flex';
@@ -43,9 +45,11 @@
     var b = ensureBar().querySelector('button');
     b.disabled = true; b.textContent = 'Memuat…';
     try {
+      failed = false;
       await window.reload();
-      // reload() sudah menangani errornya sendiri; bila gagal lagi, wrapper di bawah menampilkan banner kembali.
-      hideBanner();
+      // reload() menangani errornya sendiri dan wrapper di bawah memanggil showBanner() (failed = true).
+      // Banner hanya disembunyikan bila tidak ada kegagalan, supaya tidak hilang padahal data belum termuat.
+      if (!failed) hideBanner();
     } finally {
       retrying = false; b.disabled = false; b.textContent = 'Coba lagi';
     }
