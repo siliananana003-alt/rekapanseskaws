@@ -1,0 +1,169 @@
+/* LiXi Store — lapisan tambahan tampilan.
+ * Muat setelah style.css. Semua warna utama mengikuti variabel tema aplikasi.
+ * Cache: naikkan angka ?v= pada index.html setiap kali file ini diubah. */
+
+/* ========================================================================== 
+   KOMPONEN
+   ========================================================================== */
+
+/* Lencana status: konsisten dengan palet tema yang sedang aktif */
+.lx-expired-table .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--p3);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.lx-expired-table .badge.bactive {
+  color: var(--pd);
+  background: var(--p2);
+}
+.lx-expired-table .badge.bsoon {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--p2) 72%, var(--p3));
+  border-style: dashed;
+}
+.lx-expired-table .badge.bexpired {
+  color: var(--ink);
+  background: var(--p3);
+  border-color: var(--p);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--p) 18%, transparent);
+}
+.lx-expired-table .badge.bexpired::before {
+  content: "✦";
+  color: var(--pd);
+  font-size: 11px;
+}
+
+/* Avatar produk dekoratif tanpa menyentuh data atau renderer JavaScript */
+.lx-product-table tbody td:first-child {
+  position: relative;
+  min-width: 190px;
+  padding-left: 54px;
+}
+.lx-product-table tbody td:first-child::before {
+  content: "🛍️";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 1.5px solid var(--p3);
+  border-radius: 12px;
+  background: var(--p2);
+  box-shadow: 0 2px 0 var(--p3);
+  font-size: 17px;
+}
+.lx-product-table tbody td:first-child b {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+/* Dialog utama bergaya kawaii, tetapi tetap memakai warna tema aktif */
+.lx-dialog {
+  background: rgba(0, 0, 0, .35);
+  background: color-mix(in srgb, var(--ink) 38%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.lx-dialog .box {
+  position: relative;
+  border: 2px solid var(--p3);
+  border-radius: 28px;
+  background: linear-gradient(145deg, var(--panel), var(--p2) 145%);
+  box-shadow:
+    0 7px 0 color-mix(in srgb, var(--p3) 88%, transparent),
+    0 22px 55px color-mix(in srgb, var(--ink) 24%, transparent);
+}
+.lx-dialog .box > .ph:first-child {
+  border-bottom: 1px dashed var(--p3);
+}
+.lx-dialog .box > .ph:first-child h2::before {
+  content: "✿";
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--p);
+  font-size: .9em;
+}
+.lx-dialog .box .actions {
+  border-top: 1px dashed var(--p3);
+}
+
+/* ========================================================================== 
+   DEKORASI
+   ========================================================================== */
+
+/* Penanda lembut pada kartu jumlah expired */
+.lx-expired-cards .card {
+  position: relative;
+  overflow: hidden;
+}
+.lx-expired-cards .card:nth-child(4) {
+  border-color: var(--p3);
+  background: linear-gradient(145deg, var(--panel), var(--p2));
+}
+.lx-expired-cards .card:nth-child(4)::after {
+  content: "⌛";
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 19px;
+  opacity: .72;
+  pointer-events: none;
+}
+.lx-dialog .box::before,
+.lx-dialog .box::after {
+  position: absolute;
+  z-index: 1;
+  color: var(--p);
+  opacity: .65;
+  pointer-events: none;
+}
+.lx-dialog .box::before {
+  content: "✧";
+  top: 9px;
+  right: 15px;
+  font-size: 18px;
+}
+.lx-dialog .box::after {
+  content: "·";
+  top: 31px;
+  right: 25px;
+  font-size: 23px;
+}
+
+/* ========================================================================== 
+   RESPONSIF
+   ========================================================================== */
+
+@media (max-width: 600px) {
+  .lx-product-table tbody td:first-child {
+    min-width: 155px;
+    padding-left: 47px;
+  }
+  .lx-product-table tbody td:first-child::before {
+    left: 8px;
+    width: 29px;
+    height: 29px;
+    border-radius: 10px;
+    font-size: 15px;
+  }
+  .lx-dialog .box {
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -4px 0 var(--p3), 0 -12px 34px color-mix(in srgb, var(--ink) 18%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-dialog .box {
+    animation: none;
+  }
+}
