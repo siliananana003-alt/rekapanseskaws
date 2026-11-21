@@ -11,8 +11,8 @@
     // sweepRequired: tabel opsional, tetapi WAJIB ikut ter-backup sebelum Sapu Bersih (menyimpan jumlah pembelian permanen).
     { name: 'lixi_customer_profiles', order: 'customer_wa', required: false, sweepRequired: true },
     // Ringkasan bulanan untuk tren 12 bulan; dilewati bila belum dibuat.
-    { name: 'lixi_monthly_summary', order: 'month', required: false },
-    { name: 'lixi_monthly_product_summary', order: ['month', 'product_name'], required: false }
+    { name: 'lixi_monthly_summary', order: 'month', required: false, sweepRequired: true },
+    { name: 'lixi_monthly_product_summary', order: ['month', 'product_name'], required: false, sweepRequired: true }
   ];
   var PAGE = 1000;
   var KEY = 'lixiLastBackup';
