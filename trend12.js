@@ -16,6 +16,7 @@
   var loadingPromise = null;  // permintaan yang sedang berjalan (satu pada satu waktu)
   var requestedKey = null;    // rentang terbaru yang diminta; dipakai agar permintaan basi diulang
   var loadedFrom = null;      // awal rentang ringkasan yang sudah dimuat (tanpa batas atas)
+  var dirty = false;          // true bila data berubah saat permintaan sedang berjalan (perlu diambil ulang)
 
   function num(v) { return Number(v) || 0; }
 
@@ -32,16 +33,33 @@
     if (badge) badge.textContent = n + ' BULAN';
   }
 
+  // Ambil semua baris tabel ringkasan produk, per halaman, sama seperti fetchAll di backup.js
+  async function fetchProductRows(startKey) {
+    var rows = [], offset = 0;
+    while (true) {
+      var res = await db.from('lixi_monthly_product_summary')
+        .select('month,product_name,tx_count,omzet,cost')
+        .gte('month', startKey)
+        .order('month', { ascending: true })
+        .order('product_name', { ascending: true })
+        .range(offset, offset + 999);
+      if (res.error) throw res.error;
+      var batch = res.data || [];
+      if (!batch.length) break;
+      rows.push.apply(rows, batch);
+      offset += batch.length;
+    }
+    return rows;
+  }
   async function fetchRange(startKey) {
     try {
       var a = await db.from('lixi_monthly_summary').select('month,tx_count,omzet,cost').gte('month', startKey).order('month');
       if (a.error) throw a.error;
-      var b = await db.from('lixi_monthly_product_summary').select('month,product_name,tx_count,omzet,cost').gte('month', startKey);
-      if (b.error) throw b.error;
+      var prodRows = await fetchProductRows(startKey);
       var map = {};
       (a.data || []).forEach(function (r) { map[r.month] = { omzet: num(r.omzet), cost: num(r.cost), count: num(r.tx_count) }; });
       summary = map;
-      products = b.data || [];
+      products = prodRows;
       loadedFrom = startKey;
     } catch (e) {
       summary = null; products = null; loadedFrom = null;
@@ -56,12 +74,13 @@
   function refreshSummary(force) {
     if (typeof db === 'undefined' || !db) return Promise.resolve(false);
     requestedKey = shiftMonth(monthKeyFromInput(), -(MONTHS + 1));
+    if (force) dirty = true;
     if (loadingPromise) return loadingPromise;
     if (!force && summary && loadedFrom && requestedKey >= loadedFrom) return Promise.resolve(false);
     loadingPromise = (async function () {
       try {
         var key;
-        do { key = requestedKey; await fetchRange(key); } while (key !== requestedKey);
+        do { key = requestedKey; dirty = false; await fetchRange(key); } while (key !== requestedKey || dirty);
         return true;
       } finally {
         loadingPromise = null;
@@ -127,7 +146,7 @@
       box = document.createElement('div');
       box.id = 'lxSweepNote';
       box.style.cssText = 'margin:0 0 12px;padding:8px 14px;border-radius:16px;border:2px dashed var(--p3);background:var(--p2);font-size:12px;font-weight:700;color:var(--ink)';
-      box.textContent = 'Sebagian transaksi bulan ini sudah dibersihkan (Sapu Bersih). Omzet, modal, profit, dan profit per produk memakai ringkasan bulanan; daftar pembeli hanya dari transaksi yang masih tersimpan.';
+      box.textContent = 'Sebagian transaksi bulan yang dipilih sudah dibersihkan (Sapu Bersih). Omzet, modal, profit, dan profit per produk memakai ringkasan bulanan; daftar pembeli hanya dari transaksi yang masih tersimpan.';
       cards.parentNode.insertBefore(box, cards);
     }
     if (box) box.style.display = show ? 'block' : 'none';
