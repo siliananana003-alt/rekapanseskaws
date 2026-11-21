@@ -61,7 +61,6 @@
     window.loadProducts = async function () {
       try {
         var r = await origProducts.apply(this, arguments);
-        hideBanner();
         return r;
       } catch (e) {
         showBanner('Data produk gagal dimuat. Periksa koneksi internet.');
@@ -91,7 +90,8 @@
     var loggedIn = app && getComputedStyle(app).display !== 'none';
     var formOpen = modal && getComputedStyle(modal).display !== 'none';
     if (!loggedIn || formOpen || !navigator.onLine || typeof window.reload !== 'function') return;
-    window.reload();
+    failed = false;
+    Promise.resolve(window.reload()).then(function () { if (!failed) hideBanner(); });
   });
 
   /* 3) Catat error tak tertangani */
