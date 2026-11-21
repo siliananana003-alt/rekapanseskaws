@@ -34,9 +34,9 @@
       var res = await q.range(offset, offset + PAGE - 1);
       if (res.error) throw res.error;
       var batch = res.data || [];
+      if (!batch.length) break;
       rows.push.apply(rows, batch);
-      if (batch.length < PAGE) break;
-      offset += PAGE;
+      offset += batch.length;
     }
     return rows;
   }
@@ -118,10 +118,11 @@
       if (sweeping) return;
       sweeping = true;
       try {
-        var ready = typeof customerProfilesLoaded !== 'undefined' && customerProfilesLoaded;
-        if (!ready || typeof db === 'undefined' || !db || typeof localDateString !== 'function') {
-          return await origSweep.apply(this, arguments);   // fungsi asli yang menangani pesan/penolakannya
+        if (typeof customerProfilesLoaded === 'undefined' || typeof db === 'undefined' || !db || typeof localDateString !== 'function') {
+          say('Tidak bisa memastikan backup aman. Penghapusan dibatalkan.');
+          return;
         }
+        if (!customerProfilesLoaded) return await origSweep.apply(this, arguments);   // app.js yang menolak dengan pesannya sendiri
         var cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - 30);
         var res = await db.from('transactions').select('id', { count: 'exact', head: true }).lt('expire_date', localDateString(cutoff));
@@ -131,6 +132,10 @@
         say('Sebelum dihapus, backup lengkap diunduh dulu 🛟');
         var ok = await runBackup({ strict: true });
         if (!ok) { say('Penghapusan dibatalkan karena backup gagal. Tidak ada data yang dihapus.'); return; }
+        if (!confirm('File backup (lixi-backup-....json) sudah terunduh di perangkat ini?\n\nKlik OK hanya bila file itu benar-benar ada. Setelah ini transaksi expired akan dihapus permanen.')) {
+          say('Penghapusan dibatalkan. Tidak ada data yang dihapus.');
+          return;
+        }
         return await origSweep.apply(this, arguments);
       } finally {
         sweeping = false;
