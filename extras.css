@@ -140,6 +140,58 @@
   font-size: 23px;
 }
 
+/* Pelanggan: ubah nomor & hapus (customers.js) */
+.lx-cust-actions { display: inline; }
+.btn.light.lx-cust-del {
+  color: color-mix(in srgb, var(--red) 72%, black);
+  border-color: color-mix(in srgb, var(--red) 38%, var(--p3));
+}
+.lx-cust-dialog .box { width: min(460px, 100%); }
+.lx-cust-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 2px dashed var(--p3);
+  border-radius: 18px;
+  background: var(--p2);
+}
+.lx-cust-card b { font-weight: 900; overflow-wrap: anywhere; }
+.lx-cust-stats { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); }
+.lx-cust-stats b { color: var(--ink); }
+.lx-cust-hint { min-height: 20px; margin-top: 6px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.lx-cust-hint.ok { color: var(--ink); }
+.lx-cust-hint.ok::before { content: "✓ "; }
+.lx-cust-hint.bad { color: color-mix(in srgb, var(--red) 72%, black); }
+.lx-cust-hint.bad::before { content: "! "; }
+.lx-cust-warn {
+  margin: 12px 0;
+  padding: 11px 14px;
+  border: 2px dashed var(--yellow);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--yellow) 10%, var(--panel));
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.lx-cust-warn.is-danger {
+  border-color: var(--red);
+  background: color-mix(in srgb, var(--red) 9%, var(--panel));
+}
+.lx-cust-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+  color: var(--ink);
+  cursor: pointer;
+}
+.lx-cust-note { margin: 12px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.lx-cust-dialog .btn.lx-cust-danger { background: color-mix(in srgb, var(--red) 72%, black); }
+
 /* ========================================================================== 
    RESPONSIF
    ========================================================================== */
