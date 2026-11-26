@@ -1,4 +1,4 @@
-/* LiXi pelanggan — ubah nomor WhatsApp & hapus pelanggan. Tidak mengubah app.js.
+/* LiXi pelanggan — edit nama/nomor WhatsApp & hapus pelanggan. Tidak mengubah app.js.
  * Butuh customer_manage.sql di Supabase. Pasang SETELAH trend12.js:
  *   <script defer src="customers.js?v=1"></script>
  * Memakai global milik app: db, esc, rupiah, formatWA, toast, loadTx, lxIc, allTxs,
@@ -87,48 +87,56 @@
       '<div class="lx-cust-stats"><span><b>' + c.count + '</b> pembelian</span><span><b>' + rp(c.total) + '</b> total belanja</span></div></div>';
   }
 
-  /* ---------- Ubah nomor ---------- */
+  /* ---------- Edit nama & nomor ---------- */
   function openRename(wa) {
     var c = infoOf(wa); if (!c) return;
-    st = { mode: 'rename', wa: wa, c: c, n: '', merge: false };
-    show('Ubah nomor WhatsApp', card(c) +
-      '<label for="custNewWa">Nomor baru</label>' +
+    st = { mode: 'rename', wa: wa, c: c, n: wa, newName: null, merge: false };
+    show('Edit pelanggan', card(c) +
+      '<label for="custNewName">Nama</label>' +
+      '<input id="custNewName" autocomplete="off" maxlength="100" placeholder="Nama pelanggan">' +
+      '<label for="custNewWa" class="lx-cust-gap">Nomor WhatsApp</label>' +
       '<input id="custNewWa" type="tel" inputmode="numeric" autocomplete="off" placeholder="Contoh: 081234… atau 6281234…" aria-describedby="custHint">' +
       '<div id="custHint" class="lx-cust-hint" aria-live="polite"></div>' +
       '<div id="custMergeBox" class="lx-cust-warn is-merge" hidden><span id="custMergeText"></span>' +
       '<label class="lx-cust-check"><input type="checkbox" id="custMerge"> Ya, gabungkan jadi satu pelanggan</label></div>' +
-      '<p class="lx-cust-note">Semua transaksi dan jumlah pembelian ikut pindah ke nomor baru. Nama pelanggan tidak berubah.</p>' +
-      '<div id="custErr" class="error" role="alert"></div>', 'Simpan nomor', false);
-    $id('custNewWa').addEventListener('input', checkRename);
+      '<p class="lx-cust-note">Perubahan nama dan nomor berlaku untuk semua transaksi dan jumlah pembelian pelanggan ini.</p>' +
+      '<div id="custErr" class="error" role="alert"></div>', 'Simpan perubahan', false);
+    $id('custNewName').value = c.name;
+    $id('custNewWa').value = wa;
+    ['custNewName', 'custNewWa'].forEach(function (id) { $id(id).addEventListener('input', checkRename); });
     $id('custMerge').addEventListener('change', checkRename);
-    $id('custNewWa').focus();
+    $id('custNewName').focus();
+    $id('custNewName').select();
   }
   function checkRename() {
     if (!st || st.mode !== 'rename') return;
-    var n = formatWA($id('custNewWa').value), hint = $id('custHint'), go = $id('custDlgGo');
-    var ok = false, msg = '', cls = '', other = null;
+    var name = $id('custNewName').value.trim(), n = formatWA($id('custNewWa').value);
+    var hint = $id('custHint'), go = $id('custDlgGo');
+    var msg = '', cls = '', numOk = false, other = null;
     $id('custErr').textContent = '';
-    if (n) {
-      if (!/^62\d{8,13}$/.test(n)) { msg = 'Nomor belum valid. Periksa kode negara dan jumlah digitnya.'; cls = 'bad'; }
-      else if (n === st.wa) { msg = 'Sama dengan nomor sekarang.'; cls = 'bad'; }
-      else { ok = true; msg = 'Akan disimpan sebagai ' + n; cls = 'ok'; other = infoOf(n); }
-    }
+    if (!name) { msg = 'Isi nama pelanggan.'; cls = 'bad'; }
+    else if (!n) { msg = 'Isi nomor WhatsApp.'; cls = 'bad'; }
+    else if (!/^62\d{8,13}$/.test(n)) { msg = 'Nomor belum valid. Periksa kode negara dan jumlah digitnya.'; cls = 'bad'; }
+    else if (n === st.wa) { numOk = true; }
+    else { numOk = true; msg = 'Nomor akan disimpan sebagai ' + n; cls = 'ok'; other = infoOf(n); }
+    if (!name || !n) numOk = false;
     hint.textContent = msg; hint.className = 'lx-cust-hint ' + cls;
     $id('custMergeBox').hidden = !other;
     if (other) $id('custMergeText').textContent = 'Nomor ini sudah dipakai ' + other.name + ' (' + other.count +
-      ' pembelian). Digabung berarti riwayat keduanya disatukan dan memakai nama ' + st.c.name + '.';
-    go.textContent = other ? 'Gabungkan & ubah nomor' : 'Simpan nomor';
-    go.disabled = !ok || (!!other && !$id('custMerge').checked);
-    st.n = n; st.merge = !!other;
+      ' pembelian). Digabung berarti riwayat keduanya disatukan dan memakai nama ' + (name || st.c.name) + '.';
+    var nameChanged = name !== st.c.name, numChanged = n !== st.wa;
+    go.textContent = other ? 'Gabungkan & simpan' : 'Simpan perubahan';
+    go.disabled = !numOk || !(nameChanged || numChanged) || (!!other && !$id('custMerge').checked);
+    st.n = n; st.merge = !!other; st.newName = nameChanged ? name : null;
   }
   async function runRename() {
-    var go = $id('custDlgGo'), err = $id('custErr'), name = st.c.name, n = st.n;
+    var go = $id('custDlgGo'), err = $id('custErr'), label = st.newName || st.c.name;
     busy = true; go.disabled = true; go.textContent = 'Menyimpan…';
     try {
-      var res = await db.rpc('lixi_change_customer_wa', { p_old_wa: st.wa, p_new_wa: n, p_merge: st.merge });
+      var res = await db.rpc('lixi_change_customer_wa', { p_old_wa: st.wa, p_new_wa: st.n, p_merge: st.merge, p_new_name: st.newName });
       if (res.error) { err.textContent = explain(res.error); return; }
       busy = false; close();
-      say('Nomor ' + name + ' diubah ke ' + n + ' ✨');
+      say('Data ' + label + ' diperbarui ✨');
       await refresh();
     } catch (e) {
       console.error(e); err.textContent = 'Koneksi bermasalah. Coba lagi.';
@@ -190,7 +198,7 @@
       var box = document.createElement('span');
       box.className = 'lx-cust-actions';
       box.innerHTML =
-        '<button type="button" class="btn light flex-mini" data-lx-cust="wa" data-wa="' + wa + '" aria-label="Ubah nomor ' + esc(name) + '">' + ic('i-pencil') + ' Ubah nomor</button>' +
+        '<button type="button" class="btn light flex-mini" data-lx-cust="wa" data-wa="' + wa + '" aria-label="Edit ' + esc(name) + '">' + ic('i-pencil') + ' Edit</button>' +
         '<button type="button" class="btn light flex-mini lx-cust-del" data-lx-cust="del" data-wa="' + wa + '" aria-label="Hapus ' + esc(name) + '">Hapus</button>';
       td[5].appendChild(box);
     });
