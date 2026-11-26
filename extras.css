@@ -159,6 +159,7 @@
   border-radius: 18px;
   background: var(--p2);
 }
+.lx-cust-gap { margin-top: 12px; }
 .lx-cust-card b { font-weight: 900; overflow-wrap: anywhere; }
 .lx-cust-stats { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); }
 .lx-cust-stats b { color: var(--ink); }
